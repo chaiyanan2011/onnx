@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,14 +8,13 @@ from PIL import Image
 import io
 import json
 import os
-import base64
-from typing import List, Optional
+import time
+from typing import Optional
 import tempfile
 import cv2
 
-app = FastAPI(title="Universal ONNX API", version="1.0.0")
+app = FastAPI(title="Universal ONNX API", version="2.0.0")
 
-# CORS ให้หน้าเว็บยิงมาได้
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,50 +23,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# เก็บโมเดลที่โหลดไว้
 loaded_models = {}
+UPLOAD_TIMEOUT = 300  # 5 นาที
 
-# ==================== MOUNT STATIC FILES ====================
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Static files
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# ==================== HELPER FUNCTIONS ====================
+# Models directory
+models_dir = os.path.join(os.path.dirname(__file__), "models")
+os.makedirs(models_dir, exist_ok=True)
 
 def get_model_info(model_path):
-    """ดึงข้อมูลโมเดล ONNX"""
     try:
         session = ort.InferenceSession(model_path)
         inputs = []
         outputs = []
-
         for inp in session.get_inputs():
-            inputs.append({
-                "name": inp.name,
-                "shape": list(inp.shape),
-                "type": str(inp.type)
-            })
-
+            shape = [str(s) if s is not None else "?" for s in inp.shape]
+            inputs.append({"name": inp.name, "shape": shape, "type": str(inp.type)})
         for out in session.get_outputs():
-            outputs.append({
-                "name": out.name,
-                "shape": list(out.shape),
-                "type": str(out.type)
-            })
-
-        return {
-            "inputs": inputs,
-            "outputs": outputs,
-            "providers": session.get_providers()
-        }
+            shape = [str(s) if s is not None else "?" for s in out.shape]
+            outputs.append({"name": out.name, "shape": shape, "type": str(out.type)})
+        return {"inputs": inputs, "outputs": outputs, "providers": session.get_providers()}
     except Exception as e:
         return {"error": str(e)}
 
 def preprocess_image(image_bytes, target_size=(640, 640), normalize="01", channel_order="rgb"):
-    """Preprocess รูปภาพสำหรับ ONNX"""
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     img = img.resize(target_size)
     img_array = np.array(img).astype(np.float32)
 
-    # Normalize
     if normalize == "imagenet":
         mean = np.array([0.485, 0.456, 0.406])
         std = np.array([0.229, 0.224, 0.225])
@@ -77,129 +65,107 @@ def preprocess_image(image_bytes, target_size=(640, 640), normalize="01", channe
     elif normalize == "11":
         img_array = img_array / 127.5 - 1.0
 
-    # Channel order
     if channel_order == "bgr":
         img_array = img_array[:, :, ::-1]
 
-    # HWC -> CHW
     img_array = np.transpose(img_array, (2, 0, 1))
-    # Add batch dimension
     img_array = np.expand_dims(img_array, axis=0)
-
     return img_array
-
-def preprocess_video(video_bytes, target_size=(224, 224), max_frames=10):
-    """Preprocess วิดีโอสำหรับ ONNX"""
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-        tmp.write(video_bytes)
-        tmp_path = tmp.name
-
-    cap = cv2.VideoCapture(tmp_path)
-    frames = []
-    frame_count = 0
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    interval = max(1, total_frames // max_frames)
-
-    while len(frames) < max_frames:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if frame_count % interval == 0:
-            frame = cv2.resize(frame, target_size)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = frame.astype(np.float32) / 255.0
-            frame = np.transpose(frame, (2, 0, 1))
-            frames.append(frame)
-        frame_count += 1
-
-    cap.release()
-    os.remove(tmp_path)
-
-    if len(frames) == 0:
-        raise ValueError("Could not extract frames from video")
-
-    # Pad if needed
-    while len(frames) < max_frames:
-        frames.append(frames[-1])
-
-    return np.array(frames).astype(np.float32)
-
-def preprocess_audio(audio_bytes, sample_rate=16000, duration=10):
-    """Preprocess เสียงสำหรับ ONNX (simplified)"""
-    # สำหรับตัวอย่างนี้ จะสร้าง dummy audio data
-    # ใน production ควรใช้ librosa หรือ soundfile
-    target_samples = sample_rate * duration
-    return np.random.randn(1, target_samples).astype(np.float32)
-
-def preprocess_text(text, max_length=512):
-    """Preprocess ข้อความสำหรับ ONNX (simplified)"""
-    # Simple tokenization - ใน production ควรใช้ tokenizer จริง
-    tokens = text.lower().split()[:max_length]
-    indices = [hash(t) % 30000 for t in tokens]
-    while len(indices) < max_length:
-        indices.append(0)
-    return np.array([indices]).astype(np.int64)
 
 # ==================== API ENDPOINTS ====================
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """เสิร์ฟหน้าเว็บหลัก"""
-    with open("static/index.html", "r", encoding="utf-8") as f:
-        return f.read()
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "<h1>API Running</h1><a href='/static/index.html'>Go to App</a>"
 
 @app.get("/api/health")
 async def health_check():
-    """เช็คสถานะ API"""
-    return {"status": "ok", "onnx_runtime": ort.get_device()}
+    return {
+        "status": "ok",
+        "onnx_runtime": ort.get_device(),
+        "models_loaded": len(loaded_models),
+        "models_dir": models_dir,
+        "disk_free_gb": round(os.statvfs(models_dir).f_frsize * os.statvfs(models_dir).f_bavail / (1024**3), 2) if hasattr(os, 'statvfs') else "N/A"
+    }
 
 @app.post("/api/model/upload")
 async def upload_model(file: UploadFile = File(...)):
-    """อัปโหลดโมเดล ONNX"""
+    """อัปโหลดโมเดล ONNX พร้อมตรวจสอบ"""
+    start_time = time.time()
+
     if not file.filename.endswith(".onnx"):
         raise HTTPException(400, "Only .onnx files allowed")
 
     model_id = file.filename.replace(".onnx", "")
-    model_path = f"models/{file.filename}"
+    model_path = os.path.join(models_dir, file.filename)
 
-    with open(model_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
-
-    # โหลดโมเดลและเก็บไว้
     try:
-        session = ort.InferenceSession(model_path)
+        # อ่านไฟล์เป็นชิ้นๆ (chunked)
+        chunk_size = 1024 * 1024  # 1MB chunks
+        with open(model_path, "wb") as f:
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+        # ตรวจสอบขนาดไฟล์
+        file_size = os.path.getsize(model_path)
+        if file_size == 0:
+            os.remove(model_path)
+            raise HTTPException(400, "Uploaded file is empty")
+
+        # โหลดโมเดล
+        load_start = time.time()
+        session = ort.InferenceSession(model_path, providers=['CPUExecutionProvider'])
+        load_time = round(time.time() - load_start, 2)
+
         loaded_models[model_id] = {
             "session": session,
             "path": model_path,
-            "info": get_model_info(model_path)
+            "info": get_model_info(model_path),
+            "size_mb": round(file_size / 1024 / 1024, 2)
         }
+
+        total_time = round(time.time() - start_time, 2)
+
         return {
             "success": True,
             "model_id": model_id,
+            "file_size_mb": round(file_size / 1024 / 1024, 2),
+            "load_time_sec": load_time,
+            "total_time_sec": total_time,
             "info": loaded_models[model_id]["info"]
         }
+
     except Exception as e:
-        raise HTTPException(500, f"Failed to load model: {str(e)}")
+        # ลบไฟล์ถ้าเกิด error
+        if os.path.exists(model_path):
+            os.remove(model_path)
+        raise HTTPException(500, f"Failed: {str(e)}")
 
 @app.get("/api/models")
 async def list_models():
-    """แสดงรายการโมเดลที่โหลดไว้"""
     return {
-        "models": [
-            {
-                "id": k,
-                "info": v["info"]
-            } for k, v in loaded_models.items()
-        ]
+        "models": [{"id": k, "size_mb": v.get("size_mb", 0), "info": v["info"]} for k, v in loaded_models.items()]
     }
 
-@app.get("/api/model/{model_id}/info")
-async def get_model_info_endpoint(model_id: str):
-    """ดูข้อมูลโมเดล"""
-    if model_id not in loaded_models:
-        raise HTTPException(404, "Model not found")
-    return loaded_models[model_id]["info"]
+@app.delete("/api/model/{model_id}")
+async def delete_model(model_id: str):
+    """ลบโมเดลเพื่อเคลียร์พื้นที่"""
+    if model_id in loaded_models:
+        model_path = loaded_models[model_id]["path"]
+        if os.path.exists(model_path):
+            os.remove(model_path)
+        del loaded_models[model_id]
+        return {"success": True, "message": f"Model {model_id} deleted"}
+    raise HTTPException(404, "Model not found")
+
+# ==================== INFERENCE ENDPOINTS ====================
 
 @app.post("/api/inference/image")
 async def inference_image(
@@ -209,215 +175,106 @@ async def inference_image(
     normalize: str = Form("01"),
     channel_order: str = Form("rgb")
 ):
-    """รัน inference ด้วยรูปภาพ"""
     if model_id not in loaded_models:
-        raise HTTPException(404, "Model not found")
+        raise HTTPException(404, "Model not found. Please upload first.")
 
-    session = loaded_models[model_id]["session"]
-    image_bytes = await file.read()
+    try:
+        session = loaded_models[model_id]["session"]
+        image_bytes = await file.read()
 
-    w, h = map(int, target_size.split(","))
-    input_data = preprocess_image(image_bytes, (w, h), normalize, channel_order)
+        if len(image_bytes) == 0:
+            raise HTTPException(400, "Empty image file")
 
-    input_name = session.get_inputs()[0].name
-    outputs = session.run(None, {input_name: input_data})
+        w, h = map(int, target_size.split(","))
+        input_data = preprocess_image(image_bytes, (w, h), normalize, channel_order)
 
-    return {
-        "success": True,
-        "outputs": [
-            {
-                "name": session.get_outputs()[i].name,
-                "shape": list(out.shape),
-                "preview": out.flatten()[:20].tolist()
-            }
-            for i, out in enumerate(outputs)
-        ]
-    }
+        input_name = session.get_inputs()[0].name
+        outputs = session.run(None, {input_name: input_data})
 
-@app.post("/api/inference/video")
-async def inference_video(
-    model_id: str = Form(...),
-    file: UploadFile = File(...),
-    target_size: str = Form("224,224"),
-    max_frames: int = Form(10)
-):
-    """รัน inference ด้วยวิดีโอ"""
-    if model_id not in loaded_models:
-        raise HTTPException(404, "Model not found")
-
-    session = loaded_models[model_id]["session"]
-    video_bytes = await file.read()
-
-    w, h = map(int, target_size.split(","))
-    input_data = preprocess_video(video_bytes, (w, h), max_frames)
-
-    input_name = session.get_inputs()[0].name
-    outputs = session.run(None, {input_name: input_data})
-
-    return {
-        "success": True,
-        "outputs": [
-            {
-                "name": session.get_outputs()[i].name,
-                "shape": list(out.shape),
-                "preview": out.flatten()[:20].tolist()
-            }
-            for i, out in enumerate(outputs)
-        ]
-    }
-
-@app.post("/api/inference/audio")
-async def inference_audio(
-    model_id: str = Form(...),
-    file: UploadFile = File(...),
-    sample_rate: int = Form(16000),
-    duration: int = Form(10)
-):
-    """รัน inference ด้วยเสียง"""
-    if model_id not in loaded_models:
-        raise HTTPException(404, "Model not found")
-
-    session = loaded_models[model_id]["session"]
-    audio_bytes = await file.read()
-
-    input_data = preprocess_audio(audio_bytes, sample_rate, duration)
-
-    input_name = session.get_inputs()[0].name
-    outputs = session.run(None, {input_name: input_data})
-
-    return {
-        "success": True,
-        "outputs": [
-            {
-                "name": session.get_outputs()[i].name,
-                "shape": list(out.shape),
-                "preview": out.flatten()[:20].tolist()
-            }
-            for i, out in enumerate(outputs)
-        ]
-    }
-
-@app.post("/api/inference/text")
-async def inference_text(
-    model_id: str = Form(...),
-    text: str = Form(...),
-    max_length: int = Form(512)
-):
-    """รัน inference ด้วยข้อความ"""
-    if model_id not in loaded_models:
-        raise HTTPException(404, "Model not found")
-
-    session = loaded_models[model_id]["session"]
-    input_data = preprocess_text(text, max_length)
-
-    input_name = session.get_inputs()[0].name
-    outputs = session.run(None, {input_name: input_data})
-
-    return {
-        "success": True,
-        "outputs": [
-            {
-                "name": session.get_outputs()[i].name,
-                "shape": list(out.shape),
-                "preview": out.flatten()[:20].tolist()
-            }
-            for i, out in enumerate(outputs)
-        ]
-    }
-
-@app.post("/api/inference/numeric")
-async def inference_numeric(
-    model_id: str = Form(...),
-    data: str = Form(...),  # JSON string of array
-    shape: Optional[str] = Form(None),
-    dtype: str = Form("float32")
-):
-    """รัน inference ด้วยข้อมูลตัวเลข"""
-    if model_id not in loaded_models:
-        raise HTTPException(404, "Model not found")
-
-    session = loaded_models[model_id]["session"]
-    values = json.loads(data)
-
-    if dtype == "float32":
-        arr = np.array(values, dtype=np.float32)
-    elif dtype == "int32":
-        arr = np.array(values, dtype=np.int32)
-    elif dtype == "int64":
-        arr = np.array(values, dtype=np.int64)
-    else:
-        arr = np.array(values, dtype=np.float32)
-
-    if shape:
-        arr = arr.reshape(list(map(int, shape.split(","))))
-
-    input_name = session.get_inputs()[0].name
-    outputs = session.run(None, {input_name: arr})
-
-    return {
-        "success": True,
-        "outputs": [
-            {
-                "name": session.get_outputs()[i].name,
-                "shape": list(out.shape),
-                "preview": out.flatten()[:20].tolist()
-            }
-            for i, out in enumerate(outputs)
-        ]
-    }
+        return {
+            "success": True,
+            "outputs": [
+                {
+                    "name": session.get_outputs()[i].name,
+                    "shape": list(out.shape),
+                    "preview": out.flatten()[:20].tolist()
+                }
+                for i, out in enumerate(outputs)
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Inference failed: {str(e)}")
 
 @app.post("/api/inference/random")
-async def inference_random(
-    model_id: str = Form(...)
-):
-    """รัน inference ด้วย random data"""
+async def inference_random(model_id: str = Form(...)):
+    """รัน inference ด้วย random data (ทดสอบเร็ว)"""
     if model_id not in loaded_models:
         raise HTTPException(404, "Model not found")
 
-    session = loaded_models[model_id]["session"]
-    input_info = session.get_inputs()[0]
+    try:
+        session = loaded_models[model_id]["session"]
+        input_info = session.get_inputs()[0]
 
-    shape = [1 if s == "None" or s is None or (isinstance(s, str) and "N" in str(s)) else int(s) for s in input_info.shape]
+        shape = []
+        for s in input_info.shape:
+            if s is None or (isinstance(s, str) and "N" in s):
+                shape.append(1)
+            else:
+                try:
+                    shape.append(int(s))
+                except:
+                    shape.append(1)
 
-    if "int" in str(input_info.type).lower():
-        input_data = np.random.randint(0, 100, size=shape).astype(np.int64)
-    else:
-        input_data = np.random.randn(*shape).astype(np.float32)
+        if "int" in str(input_info.type).lower():
+            input_data = np.random.randint(0, 100, size=shape).astype(np.int64)
+        else:
+            input_data = np.random.randn(*shape).astype(np.float32)
 
-    outputs = session.run(None, {input_info.name: input_data})
+        outputs = session.run(None, {input_info.name: input_data})
 
-    return {
-        "success": True,
-        "outputs": [
-            {
-                "name": session.get_outputs()[i].name,
-                "shape": list(out.shape),
-                "preview": out.flatten()[:20].tolist()
-            }
-            for i, out in enumerate(outputs)
-        ]
-    }
+        return {
+            "success": True,
+            "outputs": [
+                {
+                    "name": session.get_outputs()[i].name,
+                    "shape": list(out.shape),
+                    "preview": out.flatten()[:20].tolist()
+                }
+                for i, out in enumerate(outputs)
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Random inference failed: {str(e)}")
 
 # Load existing models on startup
 @app.on_event("startup")
 async def load_existing_models():
-    """โหลดโมเดลที่มีอยู่ในโฟลเดอร์ models"""
-    os.makedirs("models", exist_ok=True)
-    for filename in os.listdir("models"):
+    print(f"Loading models from: {models_dir}")
+    count = 0
+    for filename in os.listdir(models_dir):
         if filename.endswith(".onnx"):
             model_id = filename.replace(".onnx", "")
-            model_path = f"models/{filename}"
+            model_path = os.path.join(models_dir, filename)
             try:
-                session = ort.InferenceSession(model_path)
+                file_size = os.path.getsize(model_path)
+                if file_size == 0:
+                    os.remove(model_path)
+                    continue
+
+                session = ort.InferenceSession(model_path, providers=['CPUExecutionProvider'])
                 loaded_models[model_id] = {
                     "session": session,
                     "path": model_path,
-                    "info": get_model_info(model_path)
+                    "info": get_model_info(model_path),
+                    "size_mb": round(file_size / 1024 / 1024, 2)
                 }
-                print(f"Loaded model: {model_id}")
+                count += 1
+                print(f"✅ Loaded: {model_id} ({round(file_size/1024/1024, 2)} MB)")
             except Exception as e:
-                print(f"Failed to load {filename}: {e}")
+                print(f"❌ Failed {filename}: {e}")
+    print(f"Total models loaded: {count}")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+    port = int(os.getenv("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port, timeout_keep_alive=120)
