@@ -6,259 +6,56 @@
     <title>🤖 Universal ONNX AI API</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
         .container { max-width: 1000px; margin: 0 auto; }
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-            padding: 30px;
-        }
+        .header { text-align: center; color: white; margin-bottom: 30px; padding: 30px; }
         .header h1 { font-size: 42px; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .header p { font-size: 18px; opacity: 0.95; }
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-        }
-        .card-title {
-            font-size: 22px;
-            font-weight: 800;
-            color: #1a1a2e;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .card { background: white; border-radius: 20px; padding: 30px; margin-bottom: 25px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+        .card-title { font-size: 22px; font-weight: 800; color: #1a1a2e; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
 
-        /* Upload Progress */
-        .upload-container {
-            position: relative;
-            border: 3px dashed #c5cae9;
-            border-radius: 16px;
-            padding: 50px 30px;
-            text-align: center;
-            background: #f8f9fa;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            overflow: hidden;
-        }
-        .upload-container:hover {
-            border-color: #667eea;
-            background: #e8eaf6;
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
-        }
-        .upload-container.uploading {
-            border-color: #667eea;
-            background: #e8eaf6;
-            cursor: default;
-        }
-        .upload-container .icon { font-size: 56px; margin-bottom: 16px; transition: all 0.3s; }
-        .upload-container:hover .icon { transform: scale(1.1); }
-        .upload-container h3 { font-size: 22px; color: #495057; margin-bottom: 8px; }
-        .upload-container p { color: #6c757d; font-size: 15px; }
+        .upload-zone { border: 3px dashed #c5cae9; border-radius: 16px; padding: 50px 30px; text-align: center; background: #f8f9fa; transition: all 0.3s; cursor: pointer; }
+        .upload-zone:hover { border-color: #667eea; background: #e8eaf6; transform: translateY(-3px); }
+        .upload-zone.uploading { border-color: #667eea; background: #e8eaf6; cursor: default; }
+        .upload-zone .icon { font-size: 56px; margin-bottom: 16px; }
 
-        /* Progress Bar */
-        .progress-wrapper {
-            display: none;
-            margin-top: 20px;
-            padding: 20px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .progress-wrapper.show { display: block; animation: fadeIn 0.3s ease; }
-        .progress-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .progress-percent {
-            font-size: 32px;
-            font-weight: 800;
-            color: #667eea;
-        }
-        .progress-detail {
-            font-size: 13px;
-            color: #6c757d;
-            text-align: right;
-        }
-        .progress-bar-bg {
-            width: 100%;
-            height: 16px;
-            background: #e9ecef;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            width: 0%;
-            border-radius: 8px;
-            transition: width 0.1s linear;
-            position: relative;
-        }
-        .progress-bar-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: shimmer 1.5s infinite;
-        }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        .progress-status {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #495057;
-            font-weight: 600;
-        }
-        .progress-speed {
-            font-size: 12px;
-            color: #6c757d;
-            margin-top: 4px;
-        }
+        .progress-box { display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .progress-box.show { display: block; }
+        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .progress-percent { font-size: 36px; font-weight: 800; color: #667eea; }
+        .progress-meta { text-align: right; font-size: 13px; color: #6c757d; }
+        .progress-bar { width: 100%; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; border-radius: 8px; transition: width 0.1s linear; position: relative; }
+        .progress-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 1s infinite; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .progress-status { margin-top: 10px; font-size: 14px; color: #495057; font-weight: 600; }
+        .progress-speed { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: #e3f2fd; border-radius: 20px; font-size: 12px; color: #1976d2; font-weight: 600; margin-top: 8px; }
 
-        /* Speed indicator */
-        .speed-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            background: #e3f2fd;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #1976d2;
-            font-weight: 600;
-            margin-top: 8px;
-        }
+        .error-box { background: #ffebee; border: 2px solid #ef9a9a; border-radius: 12px; padding: 20px; margin-top: 16px; color: #c62828; font-weight: 600; }
+        .error-box .retry-btn { margin-top: 12px; padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+        .error-box .retry-btn:hover { background: #d32f2f; }
 
-        .btn {
-            padding: 16px 36px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .success-box { background: #e8f5e9; border: 2px solid #a5d6a7; border-radius: 12px; padding: 20px; margin-top: 16px; color: #2e7d32; font-weight: 600; }
+
+        .btn { padding: 16px 36px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .btn:hover { transform: translateY(-2px); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         .btn-success { background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); color: white; }
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
 
-        .input-mode-selector {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-        .mode-btn {
-            padding: 14px 24px;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            background: white;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 700;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .mode-btn { padding: 14px 24px; border: 2px solid #e9ecef; border-radius: 12px; background: white; cursor: pointer; font-size: 15px; font-weight: 700; transition: all 0.2s; }
         .mode-btn:hover { border-color: #667eea; color: #667eea; }
         .mode-btn.active { background: #667eea; color: white; border-color: #667eea; }
 
         .input-area { background: #f8f9fa; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
-        .input-area h4 { margin-bottom: 16px; color: #1a1a2e; font-size: 17px; }
         .input-row { display: flex; gap: 14px; margin-bottom: 14px; align-items: center; }
         .input-row label { min-width: 160px; font-size: 15px; color: #495057; font-weight: 600; }
-        .input-row input, .input-row select, .input-row textarea {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-        .input-row input:focus, .input-row select:focus, .input-row textarea:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-        }
+        .input-row input, .input-row select, .input-row textarea { flex: 1; padding: 12px 16px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 15px; outline: none; }
+        .input-row input:focus, .input-row select:focus, .input-row textarea:focus { border-color: #667eea; box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1); }
         .input-row textarea { min-height: 100px; resize: vertical; }
 
-        .media-preview { max-width: 100%; max-height: 400px; border-radius: 12px; margin: 12px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-
-        .output-box {
-            background: #1a1a2e;
-            color: #e9ecef;
-            padding: 24px;
-            border-radius: 14px;
-            font-family: 'SF Mono', monospace;
-            font-size: 14px;
-            line-height: 1.8;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            min-height: 120px;
-        }
+        .media-preview { max-width: 100%; max-height: 300px; border-radius: 12px; margin: 12px 0; }
+        .output-box { background: #1a1a2e; color: #e9ecef; padding: 24px; border-radius: 14px; font-family: monospace; font-size: 14px; line-height: 1.8; overflow-x: auto; white-space: pre-wrap; }
         .output-box .key { color: #90caf9; font-weight: 700; }
-        .output-box .value { color: #a5d6a7; }
-        .output-box .number { color: #ffcc80; }
-
-        .result-success {
-            background: #e8f5e9;
-            border: 2px solid #a5d6a7;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            color: #2e7d32;
-            font-weight: 700;
-            font-size: 16px;
-        }
-        .result-error {
-            background: #ffebee;
-            border: 2px solid #ef9a9a;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            color: #c62828;
-            font-weight: 700;
-        }
-
-        .meta-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-        }
-        .meta-card {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid #e9ecef;
-        }
-        .meta-label { font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 700; }
-        .meta-value { font-size: 18px; font-weight: 800; color: #1a1a2e; }
 
         .hidden { display: none !important; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -266,222 +63,96 @@
         .fade-in { animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .api-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 700;
-        }
-        .api-status.online { background: #e8f5e9; color: #2e7d32; }
-        .api-status.offline { background: #ffebee; color: #c62828; }
-        .api-status.checking { background: #fff3e0; color: #e65100; }
-
-        .model-info-card {
-            background: #e3f2fd;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 16px;
-            border-left: 4px solid #2196f3;
-        }
-        .model-info-card h4 { color: #1976d2; margin-bottom: 8px; }
-        .model-info-card p { color: #495057; font-size: 14px; }
+        .warning-box { background: #fff3e0; border: 2px solid #ffcc80; border-radius: 12px; padding: 16px; margin-bottom: 20px; color: #e65100; font-size: 14px; }
+        .warning-box strong { color: #bf360c; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🤖 Universal ONNX AI API</h1>
-            <p>Backend API รันโมเดล ONNX ทุกประเภท</p>
+            <p>รันโมเดล ONNX ทุกประเภทบน Cloud</p>
+        </div>
+
+        <!-- Warning -->
+        <div class="warning-box">
+            <strong>⚠️ ข้อจำกัด Free Tier:</strong> อัปโหลดไฟล์ >5MB อาจล้มเหลวเนื่องจาก RAM/Timeout จำกัด 
+            แนะนำใช้โมเดล <strong>YOLOv8n (6MB)</strong> หรือรัน <strong>Local</strong> สำหรับโมเดลใหญ่
         </div>
 
         <!-- API Status -->
         <div class="card">
             <div class="card-title">📡 API Status</div>
-            <div id="apiStatus">
-                <span class="api-status checking">
-                    <span class="spin">⟳</span> Checking API...
-                </span>
-            </div>
+            <div id="apiStatus"><span style="color: #e65100;"><span class="spin">⟳</span> Checking...</span></div>
         </div>
 
-        <!-- Model Upload with Real Progress -->
+        <!-- Model Upload -->
         <div class="card">
             <div class="card-title">📦 1. Upload ONNX Model</div>
-            <div class="upload-container" id="modelUploadZone">
+            <div class="upload-zone" id="modelZone">
                 <div class="icon">📦</div>
                 <h3>ลากไฟล์ .onnx มาวาง</h3>
-                <p>หรือคลิกเพื่อเลือกไฟล์ (สูงสุด 100MB)</p>
+                <p>ขนาดแนะนำ: ไม่เกิน 5MB (Free Tier)</p>
                 <input type="file" id="modelInput" accept=".onnx" style="display: none;">
             </div>
 
-            <!-- Real Progress Bar -->
-            <div class="progress-wrapper" id="modelProgress">
-                <div class="progress-info">
-                    <span class="progress-percent" id="modelPercent">0%</span>
-                    <div class="progress-detail">
+            <div class="progress-box" id="modelProgress">
+                <div class="progress-header">
+                    <span class="progress-percent" id="modelPct">0%</span>
+                    <div class="progress-meta">
                         <div id="modelBytes">0 / 0 MB</div>
                         <div id="modelTime">0s</div>
                     </div>
                 </div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" id="modelBar"></div>
-                </div>
+                <div class="progress-bar"><div class="progress-fill" id="modelBar"></div></div>
                 <div class="progress-status" id="modelStatus">กำลังเตรียมอัปโหลด...</div>
-                <div class="speed-indicator" id="modelSpeed">
-                    <span>⚡</span>
-                    <span id="speedValue">0 MB/s</span>
-                </div>
+                <div class="progress-speed" id="modelSpeed">⚡ 0 MB/s</div>
             </div>
 
-            <div id="modelInfo" class="hidden">
-                <div class="model-info-card">
-                    <h4>✅ อัปโหลดสำเร็จ!</h4>
-                    <p id="modelInfoText"></p>
-                </div>
-            </div>
+            <div id="modelResult"></div>
         </div>
 
         <!-- Input Selection -->
         <div class="card hidden" id="inputCard">
             <div class="card-title">🎯 2. เลือกประเภทข้อมูล</div>
-            <div class="input-mode-selector">
-                <button class="mode-btn active" onclick="setMode('image')" id="mode-image">📷 Image</button>
-                <button class="mode-btn" onclick="setMode('video')" id="mode-video">🎥 Video</button>
-                <button class="mode-btn" onclick="setMode('audio')" id="mode-audio">🔊 Audio</button>
-                <button class="mode-btn" onclick="setMode('text')" id="mode-text">📝 Text</button>
-                <button class="mode-btn" onclick="setMode('numeric')" id="mode-numeric">🔢 Numeric</button>
-                <button class="mode-btn" onclick="setMode('random')" id="mode-random">🎲 Random</button>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                <button class="mode-btn active" onclick="setMode('image')">📷 Image</button>
+                <button class="mode-btn" onclick="setMode('random')">🎲 Random</button>
             </div>
 
-            <!-- Image Panel -->
             <div id="panel-image" class="input-panel">
-                <div class="upload-container" id="imageUploadZone" style="padding: 40px;">
+                <div class="upload-zone" id="imageZone" style="padding: 40px;">
                     <div class="icon">🖼️</div>
                     <h3>อัปโหลดรูปภาพ</h3>
-                    <p>JPG, PNG, WEBP</p>
+                    <p>JPG, PNG (ไม่เกิน 2MB)</p>
                     <input type="file" id="imageInput" accept="image/*" style="display: none;">
                 </div>
-                <div class="progress-wrapper" id="imageProgress">
-                    <div class="progress-info">
-                        <span class="progress-percent" id="imagePercent">0%</span>
-                        <div class="progress-detail">
-                            <div id="imageBytes">0 / 0 MB</div>
-                        </div>
+                <div class="progress-box" id="imageProgress">
+                    <div class="progress-header">
+                        <span class="progress-percent" id="imagePct">0%</span>
+                        <div class="progress-meta"><div id="imageBytes">0 MB</div></div>
                     </div>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" id="imageBar"></div>
-                    </div>
+                    <div class="progress-bar"><div class="progress-fill" id="imageBar"></div></div>
                 </div>
-                <div id="imagePreview" class="hidden" style="margin-top: 16px; text-align: center;">
-                    <img id="previewImg" class="media-preview" style="max-height: 300px;">
+                <div id="imagePreview" class="hidden" style="text-align: center; margin-top: 16px;">
+                    <img id="previewImg" class="media-preview">
                 </div>
                 <div class="input-area" style="margin-top: 16px;">
                     <div class="input-row"><label>Target Size</label><input type="text" id="imgSize" value="640,640"></div>
                     <div class="input-row">
                         <label>Normalization</label>
                         <select id="imgNorm">
-                            <option value="01">0-1 (÷255)</option>
-                            <option value="imagenet">ImageNet</option>
-                            <option value="11">-1 to 1</option>
+                            <option value="01">0-1 (÷255) - YOLO</option>
+                            <option value="imagenet">ImageNet - ResNet</option>
                         </select>
                     </div>
-                    <div class="input-row">
-                        <label>Channel Order</label>
-                        <select id="imgChannel"><option value="rgb">RGB</option><option value="bgr">BGR</option></select>
-                    </div>
                 </div>
             </div>
 
-            <!-- Video Panel -->
-            <div id="panel-video" class="input-panel hidden">
-                <div class="upload-container" id="videoUploadZone" style="padding: 40px;">
-                    <div class="icon">🎬</div>
-                    <h3>อัปโหลดวิดีโอ</h3>
-                    <p>MP4, WEBM, AVI</p>
-                    <input type="file" id="videoInput" accept="video/*" style="display: none;">
-                </div>
-                <div class="progress-wrapper" id="videoProgress">
-                    <div class="progress-info">
-                        <span class="progress-percent" id="videoPercent">0%</span>
-                        <div class="progress-detail"><div id="videoBytes">0 / 0 MB</div></div>
-                    </div>
-                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="videoBar"></div></div>
-                </div>
-                <div id="videoPreview" class="hidden" style="margin-top: 16px;">
-                    <video id="previewVideo" class="media-preview" controls style="max-height: 300px;"></video>
-                </div>
-                <div class="input-area" style="margin-top: 16px;">
-                    <div class="input-row"><label>Target Size</label><input type="text" id="vidSize" value="224,224"></div>
-                    <div class="input-row"><label>Max Frames</label><input type="number" id="vidFrames" value="10"></div>
-                </div>
-            </div>
-
-            <!-- Audio Panel -->
-            <div id="panel-audio" class="input-panel hidden">
-                <div class="upload-container" id="audioUploadZone" style="padding: 40px;">
-                    <div class="icon">🎵</div>
-                    <h3>อัปโหลดเสียง</h3>
-                    <p>WAV, MP3, OGG</p>
-                    <input type="file" id="audioInput" accept="audio/*" style="display: none;">
-                </div>
-                <div class="progress-wrapper" id="audioProgress">
-                    <div class="progress-info">
-                        <span class="progress-percent" id="audioPercent">0%</span>
-                        <div class="progress-detail"><div id="audioBytes">0 / 0 MB</div></div>
-                    </div>
-                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="audioBar"></div></div>
-                </div>
-                <div id="audioPreview" class="hidden" style="margin-top: 16px;">
-                    <audio id="previewAudio" controls style="width: 100%;"></audio>
-                </div>
-                <div class="input-area" style="margin-top: 16px;">
-                    <div class="input-row"><label>Sample Rate</label><input type="number" id="audRate" value="16000"></div>
-                    <div class="input-row"><label>Duration (sec)</label><input type="number" id="audDuration" value="10"></div>
-                </div>
-            </div>
-
-            <!-- Text Panel -->
-            <div id="panel-text" class="input-panel hidden">
-                <div class="input-area">
-                    <h4>📝 ป้อนข้อความ</h4>
-                    <textarea id="textInput" placeholder="พิมพ์ข้อความที่นี่..."></textarea>
-                    <div class="input-row" style="margin-top: 12px;"><label>Max Length</label><input type="number" id="textMaxLen" value="512"></div>
-                </div>
-            </div>
-
-            <!-- Numeric Panel -->
-            <div id="panel-numeric" class="input-panel hidden">
-                <div class="input-area">
-                    <h4>🔢 ข้อมูลตัวเลข</h4>
-                    <div class="input-row"><label>Shape</label><input type="text" id="numShape" value="1,10" placeholder="1, 3, 224, 224"></div>
-                    <div class="input-row">
-                        <label>Data Type</label>
-                        <select id="numDtype">
-                            <option value="float32">float32</option>
-                            <option value="int32">int32</option>
-                            <option value="int64">int64</option>
-                        </select>
-                    </div>
-                    <div class="input-row">
-                        <label>Fill Method</label>
-                        <select id="numFill" onchange="updateNumDisplay()">
-                            <option value="random">Random (0-1)</option>
-                            <option value="zeros">Zeros</option>
-                            <option value="ones">Ones</option>
-                        </select>
-                    </div>
-                    <div id="numDisplay" style="margin-top: 12px; color: #6c757d; font-size: 14px;"></div>
-                </div>
-            </div>
-
-            <!-- Random Panel -->
             <div id="panel-random" class="input-panel hidden">
                 <div class="input-area">
                     <h4>🎲 Random Tensor</h4>
-                    <p style="color: #6c757d;">ระบบจะสร้าง random tensor ตาม shape ที่โมเดลกำหนด</p>
+                    <p style="color: #6c757d;">ระบบจะสร้าง random tensor ตาม shape โมเดล</p>
                 </div>
             </div>
         </div>
@@ -489,19 +160,7 @@
         <!-- Run -->
         <div class="card hidden" id="runCard">
             <div class="card-title">🚀 3. Run Inference</div>
-            <button class="btn btn-success" id="runBtn" onclick="runInference()" disabled style="font-size: 18px;">
-                ▶ Run Inference
-            </button>
-            <div class="progress-wrapper" id="inferenceProgress" style="margin-top: 20px;">
-                <div class="progress-info">
-                    <span class="progress-percent" id="infPercent">0%</span>
-                    <div class="progress-detail"><div>Processing...</div></div>
-                </div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" id="infBar"></div>
-                </div>
-                <div class="progress-status" id="infStatus">กำลังเตรียมข้อมูล...</div>
-            </div>
+            <button class="btn btn-success" id="runBtn" onclick="runInference()" disabled style="font-size: 18px;">▶ Run Inference</button>
         </div>
 
         <!-- Results -->
@@ -512,25 +171,20 @@
     </div>
 
     <script>
-        const API_URL = window.location.origin.includes('localhost') 
-            ? 'http://localhost:10000' 
-            : window.location.origin;
-
+        const API_URL = window.location.origin.includes('localhost') ? 'http://localhost:10000' : window.location.origin;
         let currentModel = null;
         let currentMode = 'image';
         let uploadedFiles = {};
 
-        // Check API
         async function checkAPI() {
             try {
                 const res = await fetch(`${API_URL}/api/health`);
                 const data = await res.json();
                 document.getElementById('apiStatus').innerHTML = 
-                    `<span class="api-status online">✅ API Online (${data.onnx_runtime})</span>`;
-                loadModels();
+                    `<span style="color: #2e7d32; font-weight: 700;">✅ API Online | Disk: ${data.disk_free_gb}GB free | Models: ${data.models_loaded}</span>`;
+                if (data.models_loaded > 0) loadModels();
             } catch (e) {
-                document.getElementById('apiStatus').innerHTML = 
-                    `<span class="api-status offline">❌ API Offline</span>`;
+                document.getElementById('apiStatus').innerHTML = `<span style="color: #c62828; font-weight: 700;">❌ API Offline: ${e.message}</span>`;
             }
         }
 
@@ -540,67 +194,72 @@
                 const data = await res.json();
                 if (data.models.length > 0) {
                     currentModel = data.models[0].id;
+                    showModelSuccess(data.models[0]);
                     document.getElementById('inputCard').classList.remove('hidden');
                     document.getElementById('runCard').classList.remove('hidden');
                     document.getElementById('runBtn').disabled = false;
-                    showModelInfo(data.models[0]);
                 }
             } catch (e) {}
         }
 
-        function showModelInfo(model) {
-            const info = document.getElementById('modelInfo');
-            info.classList.remove('hidden');
-            document.getElementById('modelInfoText').innerHTML = 
-                `<strong>${model.id}</strong> | Inputs: ${model.info.inputs.length} | Outputs: ${model.info.outputs.length}`;
+        function showModelSuccess(model) {
+            document.getElementById('modelResult').innerHTML = 
+                `<div class="success-box">✅ โมเดลพร้อมใช้งาน: <strong>${model.id}</strong> (${model.size_mb} MB)</div>`;
         }
 
-        // ==================== REAL UPLOAD PROGRESS ====================
-        function uploadWithProgress(url, formData, onProgress) {
+        function showError(message, retryCallback) {
+            document.getElementById('modelResult').innerHTML = 
+                `<div class="error-box">❌ ${message}<br><button class="retry-btn" onclick="${retryCallback}">↻ ลองใหม่</button></div>`;
+        }
+
+        // ==================== UPLOAD WITH REAL PROGRESS ====================
+        function uploadFile(url, file, onProgress) {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
+                const startTime = Date.now();
 
                 xhr.upload.addEventListener('progress', (e) => {
                     if (e.lengthComputable) {
                         const percent = Math.round((e.loaded / e.total) * 100);
                         const loadedMB = (e.loaded / 1024 / 1024).toFixed(2);
                         const totalMB = (e.total / 1024 / 1024).toFixed(2);
-                        const speed = e.loaded > 0 ? (e.loaded / (Date.now() - startTime) * 1000 / 1024 / 1024).toFixed(2) : 0;
-                        onProgress({ percent, loadedMB, totalMB, speed });
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const speed = elapsed > 0 ? (e.loaded / elapsed / 1024 / 1024).toFixed(2) : 0;
+                        onProgress({ percent, loadedMB, totalMB, speed, elapsed: elapsed.toFixed(1) });
                     }
                 });
 
                 xhr.addEventListener('load', () => {
                     if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve(JSON.parse(xhr.responseText));
+                        try {
+                            resolve(JSON.parse(xhr.responseText));
+                        } catch (e) {
+                            reject(new Error('Invalid JSON response'));
+                        }
                     } else {
-                        reject(new Error(xhr.statusText));
+                        let errorMsg = `HTTP ${xhr.status}`;
+                        try {
+                            const err = JSON.parse(xhr.responseText);
+                            errorMsg = err.detail || err.message || errorMsg;
+                        } catch (e) {}
+                        reject(new Error(errorMsg));
                     }
                 });
 
-                xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+                xhr.addEventListener('error', () => reject(new Error('Network error - อาจเกิดจากไฟล์ใหญ่เกินไปหรือ timeout')));
+                xhr.addEventListener('timeout', () => reject(new Error('Request timeout - อัปโหลดนานเกินไป')));
 
-                const startTime = Date.now();
                 xhr.open('POST', url);
+                xhr.timeout = 300000; // 5 นาที
+
+                const formData = new FormData();
+                formData.append('file', file);
                 xhr.send(formData);
             });
         }
 
-        function formatProgress(percent, loadedMB, totalMB, speed, barId, percentId, bytesId, statusId, speedId) {
-            document.getElementById(barId).style.width = percent + '%';
-            document.getElementById(percentId).textContent = percent + '%';
-            document.getElementById(bytesId).textContent = `${loadedMB} / ${totalMB} MB`;
-            document.getElementById(speedId).textContent = speed + ' MB/s';
-
-            if (percent < 100) {
-                document.getElementById(statusId).textContent = `กำลังอัปโหลด... ${percent}%`;
-            } else {
-                document.getElementById(statusId).textContent = 'อัปโหลดเสร็จสิ้น! กำลังประมวลผล...';
-            }
-        }
-
         // Model Upload
-        const modelZone = document.getElementById('modelUploadZone');
+        const modelZone = document.getElementById('modelZone');
         const modelInput = document.getElementById('modelInput');
         modelZone.addEventListener('click', () => modelInput.click());
         modelZone.addEventListener('dragover', e => { e.preventDefault(); modelZone.style.borderColor = '#667eea'; });
@@ -608,46 +267,57 @@
         modelZone.addEventListener('drop', e => {
             e.preventDefault();
             modelZone.style.borderColor = '#c5cae9';
-            if (e.dataTransfer.files.length) uploadModel(e.dataTransfer.files[0]);
+            if (e.dataTransfer.files.length) handleModelUpload(e.dataTransfer.files[0]);
         });
-        modelInput.addEventListener('change', e => { if (e.target.files.length) uploadModel(e.target.files[0]); });
+        modelInput.addEventListener('change', e => { if (e.target.files.length) handleModelUpload(e.target.files[0]); });
 
-        async function uploadModel(file) {
+        async function handleModelUpload(file) {
+            // Check file size (warn if >5MB)
+            const sizeMB = file.size / 1024 / 1024;
+            if (sizeMB > 5) {
+                if (!confirm(`ไฟล์ขนาด ${sizeMB.toFixed(1)}MB อาจอัปโหลดล้มเหลวบน Free Tier\n\nต้องการลองต่อหรือไม่?`)) {
+                    return;
+                }
+            }
+
             if (!file.name.endsWith('.onnx')) {
-                alert('กรุณาเลือกไฟล์ .onnx เท่านั้น');
+                showError('กรุณาเลือกไฟล์ .onnx เท่านั้น', 'document.getElementById(\'modelInput\').click()');
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('file', file);
-
-            // Show progress
-            document.getElementById('modelProgress').classList.add('show');
-            modelZone.classList.add('uploading');
+            const progress = document.getElementById('modelProgress');
+            const zone = document.getElementById('modelZone');
+            progress.classList.add('show');
+            zone.classList.add('uploading');
+            document.getElementById('modelResult').innerHTML = '';
 
             try {
-                const result = await uploadWithProgress(
+                const result = await uploadFile(
                     `${API_URL}/api/model/upload`,
-                    formData,
-                    ({ percent, loadedMB, totalMB, speed }) => {
-                        formatProgress(percent, loadedMB, totalMB, speed, 
-                            'modelBar', 'modelPercent', 'modelBytes', 'modelStatus', 'speedValue');
+                    file,
+                    ({ percent, loadedMB, totalMB, speed, elapsed }) => {
+                        document.getElementById('modelBar').style.width = percent + '%';
+                        document.getElementById('modelPct').textContent = percent + '%';
+                        document.getElementById('modelBytes').textContent = `${loadedMB} / ${totalMB} MB`;
+                        document.getElementById('modelTime').textContent = `${elapsed}s`;
+                        document.getElementById('modelSpeed').innerHTML = `⚡ ${speed} MB/s`;
+                        document.getElementById('modelStatus').textContent = percent < 100 ? `กำลังอัปโหลด... ${percent}%` : 'อัปโหลดเสร็จ! กำลังประมวลผล...';
                     }
                 );
 
                 if (result.success) {
                     currentModel = result.model_id;
-                    showModelInfo(result);
+                    showModelSuccess({ id: result.model_id, size_mb: result.file_size_mb });
+                    document.getElementById('modelStatus').textContent = `✅ โหลดเสร็จใน ${result.load_time_sec}s (รวม ${result.total_time_sec}s)`;
                     document.getElementById('inputCard').classList.remove('hidden');
                     document.getElementById('runCard').classList.remove('hidden');
                     document.getElementById('runBtn').disabled = false;
-                    document.getElementById('modelStatus').textContent = '✅ โมเดลพร้อมใช้งาน!';
                 }
             } catch (e) {
-                document.getElementById('modelStatus').textContent = '❌ อัปโหลดล้มเหลว: ' + e.message;
-                document.getElementById('modelStatus').style.color = '#c62828';
+                showError(`อัปโหลดล้มเหลว: ${e.message}\n\nแนะนำ: ใช้โมเดลขนาดเล็ก (<5MB) หรือรัน Local`, 'document.getElementById(\'modelInput\').click()');
+                document.getElementById('modelStatus').textContent = '❌ ล้มเหลว';
             } finally {
-                modelZone.classList.remove('uploading');
+                zone.classList.remove('uploading');
             }
         }
 
@@ -655,72 +325,48 @@
         window.setMode = function(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`mode-${mode}`).classList.add('active');
+            event.target.classList.add('active');
             document.querySelectorAll('.input-panel').forEach(p => p.classList.add('hidden'));
             document.getElementById(`panel-${mode}`).classList.remove('hidden');
         };
 
-        // File handlers with progress
-        function setupFileHandler(zoneId, inputId, progressId, barId, percentId, bytesId, previewId, previewElId, fileType) {
-            const zone = document.getElementById(zoneId);
-            const input = document.getElementById(inputId);
+        // Image Upload (simplified progress)
+        const imageZone = document.getElementById('imageZone');
+        const imageInput = document.getElementById('imageInput');
+        imageZone.addEventListener('click', () => imageInput.click());
+        imageZone.addEventListener('dragover', e => { e.preventDefault(); imageZone.style.borderColor = '#667eea'; });
+        imageZone.addEventListener('dragleave', () => imageZone.style.borderColor = '#c5cae9');
+        imageZone.addEventListener('drop', e => {
+            e.preventDefault();
+            imageZone.style.borderColor = '#c5cae9';
+            if (e.dataTransfer.files.length) handleImage(e.dataTransfer.files[0]);
+        });
+        imageInput.addEventListener('change', e => { if (e.target.files.length) handleImage(e.target.files[0]); });
 
-            zone.addEventListener('click', () => input.click());
-            zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#667eea'; });
-            zone.addEventListener('dragleave', () => zone.style.borderColor = '#c5cae9');
-            zone.addEventListener('drop', e => {
-                e.preventDefault();
-                zone.style.borderColor = '#c5cae9';
-                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0], progressId, barId, percentId, bytesId, previewId, previewElId, fileType);
-            });
-            input.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0], progressId, barId, percentId, bytesId, previewId, previewElId, fileType); });
-        }
-
-        function handleFile(file, progressId, barId, percentId, bytesId, previewId, previewElId, type) {
-            uploadedFiles[type] = file;
-
-            // Show progress
-            document.getElementById(progressId).classList.add('show');
-
-            // Simulate upload progress for preview files (instant)
-            let percent = 0;
+        function handleImage(file) {
+            uploadedFiles.image = file;
+            document.getElementById('imageProgress').classList.add('show');
+            let pct = 0;
             const interval = setInterval(() => {
-                percent += 10;
-                document.getElementById(barId).style.width = percent + '%';
-                document.getElementById(percentId).textContent = percent + '%';
-                document.getElementById(bytesId).textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-
-                if (percent >= 100) {
+                pct += 20;
+                document.getElementById('imageBar').style.width = pct + '%';
+                document.getElementById('imagePct').textContent = pct + '%';
+                if (pct >= 100) {
                     clearInterval(interval);
-                    document.getElementById(progressId).classList.remove('show');
+                    setTimeout(() => document.getElementById('imageProgress').classList.remove('show'), 500);
                 }
-            }, 50);
+            }, 100);
 
             const url = URL.createObjectURL(file);
-            document.getElementById(previewId).classList.remove('hidden');
-            if (type === 'image') document.getElementById(previewElId).src = url;
-            if (type === 'video') document.getElementById(previewElId).src = url;
-            if (type === 'audio') document.getElementById(previewElId).src = url;
+            document.getElementById('imagePreview').classList.remove('hidden');
+            document.getElementById('previewImg').src = url;
         }
 
-        setupFileHandler('imageUploadZone', 'imageInput', 'imageProgress', 'imageBar', 'imagePercent', 'imageBytes', 'imagePreview', 'previewImg', 'image');
-        setupFileHandler('videoUploadZone', 'videoInput', 'videoProgress', 'videoBar', 'videoPercent', 'videoBytes', 'videoPreview', 'previewVideo', 'video');
-        setupFileHandler('audioUploadZone', 'audioInput', 'audioProgress', 'audioBar', 'audioPercent', 'audioBytes', 'audioPreview', 'previewAudio', 'audio');
-
-        window.updateNumDisplay = function() {
-            const fill = document.getElementById('numFill').value;
-            const shape = document.getElementById('numShape').value;
-            document.getElementById('numDisplay').innerHTML = 
-                `จะสร้าง tensor ขนาด [${shape}] ด้วยวิธี <strong>${fill}</strong>`;
-        };
-        updateNumDisplay();
-
-        // Run Inference with progress
+        // Run Inference
         window.runInference = async function() {
             const btn = document.getElementById('runBtn');
             const resultsCard = document.getElementById('resultsCard');
             const output = document.getElementById('outputResult');
-            const infProgress = document.getElementById('inferenceProgress');
 
             if (!currentModel) { alert('กรุณาอัปโหลดโมเดลก่อน'); return; }
 
@@ -728,7 +374,6 @@
             btn.innerHTML = '<span class="spin">⟳</span> Running...';
             resultsCard.classList.remove('hidden');
             output.innerHTML = '<div style="color: #6c757d; padding: 20px;">⏳ กำลังประมวลผล...</div>';
-            infProgress.classList.add('show');
 
             const formData = new FormData();
             formData.append('model_id', currentModel);
@@ -742,81 +387,31 @@
                     formData.append('file', uploadedFiles.image);
                     formData.append('target_size', document.getElementById('imgSize').value);
                     formData.append('normalize', document.getElementById('imgNorm').value);
-                    formData.append('channel_order', document.getElementById('imgChannel').value);
-                } else if (currentMode === 'video') {
-                    if (!uploadedFiles.video) throw new Error('กรุณาอัปโหลดวิดีโอ');
-                    endpoint += 'video';
-                    formData.append('file', uploadedFiles.video);
-                    formData.append('target_size', document.getElementById('vidSize').value);
-                    formData.append('max_frames', document.getElementById('vidFrames').value);
-                } else if (currentMode === 'audio') {
-                    if (!uploadedFiles.audio) throw new Error('กรุณาอัปโหลดเสียง');
-                    endpoint += 'audio';
-                    formData.append('file', uploadedFiles.audio);
-                    formData.append('sample_rate', document.getElementById('audRate').value);
-                    formData.append('duration', document.getElementById('audDuration').value);
-                } else if (currentMode === 'text') {
-                    endpoint += 'text';
-                    formData.append('text', document.getElementById('textInput').value);
-                    formData.append('max_length', document.getElementById('textMaxLen').value);
-                } else if (currentMode === 'numeric') {
-                    endpoint += 'numeric';
-                    const shape = document.getElementById('numShape').value;
-                    const dtype = document.getElementById('numDtype').value;
-                    const fill = document.getElementById('numFill').value;
-                    const dims = shape.split(',').map(s => parseInt(s.trim()));
-                    const total = dims.reduce((a,b) => a*b, 1);
-                    let values;
-                    if (fill === 'zeros') values = new Array(total).fill(0);
-                    else if (fill === 'ones') values = new Array(total).fill(1);
-                    else values = Array.from({length: total}, () => Math.random());
-                    formData.append('data', JSON.stringify(values));
-                    formData.append('shape', shape);
-                    formData.append('dtype', dtype);
                 } else {
                     endpoint += 'random';
                 }
 
-                // Simulate inference progress
-                let infPercent = 0;
-                const infInterval = setInterval(() => {
-                    infPercent += 5;
-                    if (infPercent > 90) infPercent = 90;
-                    document.getElementById('infBar').style.width = infPercent + '%';
-                    document.getElementById('infPercent').textContent = infPercent + '%';
-                }, 200);
-
                 const res = await fetch(`${API_URL}${endpoint}`, { method: 'POST', body: formData });
                 const data = await res.json();
 
-                clearInterval(infInterval);
-                document.getElementById('infBar').style.width = '100%';
-                document.getElementById('infPercent').textContent = '100%';
-                document.getElementById('infStatus').textContent = 'เสร็จสิ้น!';
-
                 if (data.success) {
-                    let html = `<div class="result-success">✅ Inference Success!</div>`;
+                    let html = `<div class="success-box">✅ Inference Success!</div>`;
                     data.outputs.forEach(out => {
                         html += `<div style="margin-bottom: 20px;">
-                            <div style="font-weight: 700; color: #1a1a2e; margin-bottom: 10px; font-size: 16px;">📤 ${out.name}</div>
+                            <div style="font-weight: 700; color: #1a1a2e; margin-bottom: 10px;">📤 ${out.name}</div>
                             <div style="font-size: 13px; color: #6c757d; margin-bottom: 10px;">Shape: [${out.shape.join(', ')}]</div>
-                            <div class="output-box">
-<span class="key">Preview (first 20 values):</span>
-[${out.preview.map(v => typeof v === 'number' ? v.toFixed(6) : v).join(', ')}]
-                            </div>
+                            <div class="output-box"><span class="key">Preview:</span> [${out.preview.map(v => typeof v === 'number' ? v.toFixed(6) : v).join(', ')}]</div>
                         </div>`;
                     });
                     output.innerHTML = html;
                 } else {
-                    output.innerHTML = `<div class="result-error">❌ ${data.error || 'Unknown error'}</div>`;
+                    output.innerHTML = `<div class="error-box">❌ ${data.detail || data.message || 'Unknown error'}</div>`;
                 }
-
             } catch (e) {
-                output.innerHTML = `<div class="result-error">❌ Error: ${e.message}</div>`;
+                output.innerHTML = `<div class="error-box">❌ Error: ${e.message}</div>`;
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '▶ Run Inference';
-                setTimeout(() => infProgress.classList.remove('show'), 2000);
             }
         };
 
