@@ -2,189 +2,499 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🤖 Universal ONNX AI API</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🅿️ Smart Parking Detection System</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .header { text-align: center; color: white; margin-bottom: 30px; padding: 30px; }
-        .header h1 { font-size: 42px; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .card { background: white; border-radius: 20px; padding: 30px; margin-bottom: 25px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
-        .card-title { font-size: 22px; font-weight: 800; color: #1a1a2e; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-        .upload-zone { border: 3px dashed #c5cae9; border-radius: 16px; padding: 50px 30px; text-align: center; background: #f8f9fa; transition: all 0.3s; cursor: pointer; }
-        .upload-zone:hover { border-color: #667eea; background: #e8eaf6; transform: translateY(-3px); }
-        .upload-zone.uploading { border-color: #667eea; background: #e8eaf6; cursor: default; }
-        .upload-zone .icon { font-size: 56px; margin-bottom: 16px; }
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+            padding: 16px 20px;
+            border-bottom: 2px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 { font-size: 22px; display: flex; align-items: center; gap: 10px; }
+        .header .subtitle { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .status-bar {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-pill.online { background: #064e3b; color: #34d399; }
+        .status-pill.offline { background: #450a0a; color: #f87171; }
+        .status-pill.detecting { background: #78350f; color: #fbbf24; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-        .progress-box { display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .progress-box.show { display: block; }
-        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .progress-percent { font-size: 36px; font-weight: 800; color: #667eea; }
-        .progress-meta { text-align: right; font-size: 13px; color: #6c757d; }
-        .progress-bar { width: 100%; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; border-radius: 8px; transition: width 0.1s linear; position: relative; }
-        .progress-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 1s infinite; }
-        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-        .progress-status { margin-top: 10px; font-size: 14px; color: #495057; font-weight: 600; }
-        .progress-speed { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: #e3f2fd; border-radius: 20px; font-size: 12px; color: #1976d2; font-weight: 600; margin-top: 8px; }
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-        .error-box { background: #ffebee; border: 2px solid #ef9a9a; border-radius: 12px; padding: 20px; margin-top: 16px; color: #c62828; font-weight: 600; }
-        .error-box .retry-btn { margin-top: 12px; padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
-        .error-box .retry-btn:hover { background: #d32f2f; }
+        /* Canvas Area */
+        .canvas-section {
+            position: relative;
+            background: #1e293b;
+            border: 2px solid #334155;
+            margin: 16px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #0f172a;
+            border-bottom: 1px solid #334155;
+        }
+        .canvas-title { font-size: 15px; font-weight: 700; }
+        .canvas-controls { display: flex; gap: 8px; }
+        .btn-sm {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-sm:hover { transform: translateY(-1px); }
+        .btn-draw { background: #3b82f6; color: white; }
+        .btn-draw.active { background: #f59e0b; }
+        .btn-clear { background: #ef4444; color: white; }
+        .btn-save { background: #10b981; color: white; }
+        .btn-lock { background: #8b5cf6; color: white; }
+        .btn-lock.locked { background: #ec4899; }
 
-        .success-box { background: #e8f5e9; border: 2px solid #a5d6a7; border-radius: 12px; padding: 20px; margin-top: 16px; color: #2e7d32; font-weight: 600; }
+        #parkingCanvas {
+            width: 100%;
+            display: block;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        #parkingCanvas.drawing { cursor: crosshair; }
+        #parkingCanvas.locked { cursor: not-allowed; }
 
-        .btn { padding: 16px 36px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .btn:hover { transform: translateY(-2px); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-success { background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); color: white; }
-        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        /* Lock Overlay */
+        .lock-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 50;
+            backdrop-filter: blur(4px);
+        }
+        .lock-overlay.show { display: flex; }
+        .lock-icon { font-size: 64px; margin-bottom: 16px; }
+        .lock-text { font-size: 20px; font-weight: 700; color: #fbbf24; }
+        .lock-sub { font-size: 14px; color: #94a3b8; margin-top: 8px; }
+        .unlock-hint { font-size: 12px; color: #64748b; margin-top: 20px; }
 
-        .mode-btn { padding: 14px 24px; border: 2px solid #e9ecef; border-radius: 12px; background: white; cursor: pointer; font-size: 15px; font-weight: 700; transition: all 0.2s; }
-        .mode-btn:hover { border-color: #667eea; color: #667eea; }
-        .mode-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        /* Side Panel */
+        .side-panel {
+            padding: 16px;
+            background: #1e293b;
+            border-top: 2px solid #334155;
+        }
 
-        .input-area { background: #f8f9fa; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
-        .input-row { display: flex; gap: 14px; margin-bottom: 14px; align-items: center; }
-        .input-row label { min-width: 160px; font-size: 15px; color: #495057; font-weight: 600; }
-        .input-row input, .input-row select, .input-row textarea { flex: 1; padding: 12px 16px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 15px; outline: none; }
-        .input-row input:focus, .input-row select:focus, .input-row textarea:focus { border-color: #667eea; box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1); }
-        .input-row textarea { min-height: 100px; resize: vertical; }
+        /* Slot List */
+        .slots-section { margin-bottom: 20px; }
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fbbf24;
+        }
+        .slot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+        .slot-card {
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .slot-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+        }
+        .slot-card.empty::before { background: #10b981; }
+        .slot-card.occupied::before { background: #ef4444; }
+        .slot-card.warning::before { background: #f59e0b; }
+        .slot-card.partial::before { background: #3b82f6; }
+        .slot-card.unknown::before { background: #64748b; }
 
-        .media-preview { max-width: 100%; max-height: 300px; border-radius: 12px; margin: 12px 0; }
-        .output-box { background: #1a1a2e; color: #e9ecef; padding: 24px; border-radius: 14px; font-family: monospace; font-size: 14px; line-height: 1.8; overflow-x: auto; white-space: pre-wrap; }
-        .output-box .key { color: #90caf9; font-weight: 700; }
+        .slot-card.occupied { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .slot-card.warning { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .slot-card.empty { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+
+        .slot-name { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+        .slot-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; display: inline-block; margin: 4px 0; }
+        .slot-status.occupied { background: #450a0a; color: #f87171; }
+        .slot-status.warning { background: #78350f; color: #fbbf24; }
+        .slot-status.empty { background: #064e3b; color: #34d399; }
+        .slot-iou { font-size: 11px; color: #94a3b8; }
+        .slot-alert {
+            font-size: 10px;
+            color: #fbbf24;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        /* Detection Settings */
+        .settings-section {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .setting-row label { font-size: 14px; color: #cbd5e1; }
+        .setting-row input, .setting-row select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+
+        /* Live Feed */
+        .live-section {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .live-preview {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 12px;
+            border: 2px solid #334155;
+        }
+        .live-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .btn-main {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-main:hover { transform: translateY(-2px); }
+        .btn-start { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .btn-stop { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .btn-snap { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+
+        /* Stats */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+        .stat-value { font-size: 28px; font-weight: 800; }
+        .stat-value.empty { color: #34d399; }
+        .stat-value.occupied { color: #f87171; }
+        .stat-value.warning { color: #fbbf24; }
+        .stat-label { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed #475569;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            background: #0f172a;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 16px;
+        }
+        .upload-zone:hover { border-color: #3b82f6; background: #1e3a5f; }
+        .upload-zone .icon { font-size: 40px; margin-bottom: 10px; }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            animation: slideUp 0.3s ease;
+            max-width: 320px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .toast.success { background: #064e3b; color: #34d399; border: 1px solid #10b981; }
+        .toast.error { background: #450a0a; color: #f87171; border: 1px solid #ef4444; }
+        .toast.warning { background: #78350f; color: #fbbf24; border: 1px solid #f59e0b; }
+        .toast.info { background: #1e3a5f; color: #60a5fa; border: 1px solid #3b82f6; }
+
+        /* Responsive */
+        @media (min-width: 900px) {
+            .main-container { flex-direction: row; }
+            .canvas-section { flex: 2; }
+            .side-panel { flex: 1; border-top: none; border-left: 2px solid #334155; }
+        }
 
         .hidden { display: none !important; }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; display: inline-block; }
-        .fade-in { animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .warning-box { background: #fff3e0; border: 2px solid #ffcc80; border-radius: 12px; padding: 16px; margin-bottom: 20px; color: #e65100; font-size: 14px; }
-        .warning-box strong { color: #bf360c; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🤖 Universal ONNX AI API</h1>
-            <p>รันโมเดล ONNX ทุกประเภทบน Cloud</p>
-        </div>
-
-        <!-- Warning -->
-        <div class="warning-box">
-            <strong>⚠️ ข้อจำกัด Free Tier:</strong> อัปโหลดไฟล์ >5MB อาจล้มเหลวเนื่องจาก RAM/Timeout จำกัด 
-            แนะนำใช้โมเดล <strong>YOLOv8n (6MB)</strong> หรือรัน <strong>Local</strong> สำหรับโมเดลใหญ่
-        </div>
-
-        <!-- API Status -->
-        <div class="card">
-            <div class="card-title">📡 API Status</div>
-            <div id="apiStatus"><span style="color: #e65100;"><span class="spin">⟳</span> Checking...</span></div>
-        </div>
-
-        <!-- Model Upload -->
-        <div class="card">
-            <div class="card-title">📦 1. Upload ONNX Model</div>
-            <div class="upload-zone" id="modelZone">
-                <div class="icon">📦</div>
-                <h3>ลากไฟล์ .onnx มาวาง</h3>
-                <p>ขนาดแนะนำ: ไม่เกิน 5MB (Free Tier)</p>
-                <input type="file" id="modelInput" accept=".onnx" style="display: none;">
-            </div>
-
-            <div class="progress-box" id="modelProgress">
-                <div class="progress-header">
-                    <span class="progress-percent" id="modelPct">0%</span>
-                    <div class="progress-meta">
-                        <div id="modelBytes">0 / 0 MB</div>
-                        <div id="modelTime">0s</div>
-                    </div>
-                </div>
-                <div class="progress-bar"><div class="progress-fill" id="modelBar"></div></div>
-                <div class="progress-status" id="modelStatus">กำลังเตรียมอัปโหลด...</div>
-                <div class="progress-speed" id="modelSpeed">⚡ 0 MB/s</div>
-            </div>
-
-            <div id="modelResult"></div>
-        </div>
-
-        <!-- Input Selection -->
-        <div class="card hidden" id="inputCard">
-            <div class="card-title">🎯 2. เลือกประเภทข้อมูล</div>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
-                <button class="mode-btn active" onclick="setMode('image')">📷 Image</button>
-                <button class="mode-btn" onclick="setMode('random')">🎲 Random</button>
-            </div>
-
-            <div id="panel-image" class="input-panel">
-                <div class="upload-zone" id="imageZone" style="padding: 40px;">
-                    <div class="icon">🖼️</div>
-                    <h3>อัปโหลดรูปภาพ</h3>
-                    <p>JPG, PNG (ไม่เกิน 2MB)</p>
-                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                </div>
-                <div class="progress-box" id="imageProgress">
-                    <div class="progress-header">
-                        <span class="progress-percent" id="imagePct">0%</span>
-                        <div class="progress-meta"><div id="imageBytes">0 MB</div></div>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" id="imageBar"></div></div>
-                </div>
-                <div id="imagePreview" class="hidden" style="text-align: center; margin-top: 16px;">
-                    <img id="previewImg" class="media-preview">
-                </div>
-                <div class="input-area" style="margin-top: 16px;">
-                    <div class="input-row"><label>Target Size</label><input type="text" id="imgSize" value="640,640"></div>
-                    <div class="input-row">
-                        <label>Normalization</label>
-                        <select id="imgNorm">
-                            <option value="01">0-1 (÷255) - YOLO</option>
-                            <option value="imagenet">ImageNet - ResNet</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div id="panel-random" class="input-panel hidden">
-                <div class="input-area">
-                    <h4>🎲 Random Tensor</h4>
-                    <p style="color: #6c757d;">ระบบจะสร้าง random tensor ตาม shape โมเดล</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Run -->
-        <div class="card hidden" id="runCard">
-            <div class="card-title">🚀 3. Run Inference</div>
-            <button class="btn btn-success" id="runBtn" onclick="runInference()" disabled style="font-size: 18px;">▶ Run Inference</button>
-        </div>
-
-        <!-- Results -->
-        <div class="card hidden" id="resultsCard">
-            <div class="card-title">📤 Results</div>
-            <div id="outputResult"></div>
+    <div class="header">
+        <h1>🅿️ Smart Parking Detection</h1>
+        <div class="subtitle">ระบบตรวจจับช่องจอดรถอัจฉริยะ</div>
+        <div class="status-bar">
+            <span class="status-pill online" id="apiStatus">🟢 API Online</span>
+            <span class="status-pill" id="modelStatus">📦 ไม่มีโมเดล</span>
+            <span class="status-pill" id="slotStatus">🎨 0 ช่องจอด</span>
+            <span class="status-pill hidden" id="detectStatus">🔍 กำลังตรวจจับ...</span>
         </div>
     </div>
 
-    <script>
-        const API_URL = window.location.origin.includes('localhost') ? 'http://localhost:10000' : window.location.origin;
-        let currentModel = null;
-        let currentMode = 'image';
-        let uploadedFiles = {};
+    <div class="main-container">
+        <!-- Canvas Section -->
+        <div class="canvas-section">
+            <div class="canvas-header">
+                <div class="canvas-title">🎨 วาดช่องจอดรถ (คลิก 4 จุดต่อช่อง)</div>
+                <div class="canvas-controls">
+                    <button class="btn-sm btn-draw" id="drawBtn" onclick="toggleDrawMode()">✏️ วาด</button>
+                    <button class="btn-sm btn-lock" id="lockBtn" onclick="toggleLock()">🔓 ปลดล็อค</button>
+                    <button class="btn-sm btn-clear" onclick="clearAllSlots()">🗑️ ล้าง</button>
+                    <button class="btn-sm btn-save" onclick="saveSlots()">💾 บันทึก</button>
+                </div>
+            </div>
 
+            <div style="position: relative;">
+                <canvas id="parkingCanvas"></canvas>
+                <div class="lock-overlay" id="lockOverlay">
+                    <div class="lock-icon">🔒</div>
+                    <div class="lock-text">หน้าจอถูกล็อค</div>
+                    <div class="lock-sub">กำลังตรวจจับอัตโนมัติทุก 2 วินาที</div>
+                    <div class="unlock-hint">กดปุ่ม 🔓 ปลดล็อคเพื่อแก้ไขช่องจอด</div>
+                </div>
+            </div>
+
+            <!-- Upload Background Image -->
+            <div class="upload-zone" id="bgUploadZone" onclick="document.getElementById('bgInput').click()">
+                <div class="icon">📷</div>
+                <div>คลิกเพื่ออัปโหลดภาพพื้นหลังลานจอดรถ</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 8px;">หรือลากภาพมาวาง</div>
+                <input type="file" id="bgInput" accept="image/*" style="display: none;" onchange="loadBackground(event)">
+            </div>
+        </div>
+
+        <!-- Side Panel -->
+        <div class="side-panel">
+            <!-- Stats -->
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <div class="stat-value empty" id="statEmpty">0</div>
+                    <div class="stat-label">✅ ว่าง</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value occupied" id="statOccupied">0</div>
+                    <div class="stat-label">🚗 ไม่ว่าง</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value warning" id="statWarning">0</div>
+                    <div class="stat-label">⚠️ ผิดระเบียบ</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statTotal" style="color: #60a5fa;">0</div>
+                    <div class="stat-label">ทั้งหมด</div>
+                </div>
+            </div>
+
+            <!-- Model Upload -->
+            <div class="settings-section">
+                <div class="section-title">📦 โมเดล AI</div>
+                <div class="upload-zone" style="padding: 20px; margin-bottom: 12px;" onclick="document.getElementById('modelInput').click()">
+                    <div class="icon" style="font-size: 32px;">🧠</div>
+                    <div style="font-size: 14px;">อัปโหลดโมเดล .onnx</div>
+                    <input type="file" id="modelInput" accept=".onnx" style="display: none;" onchange="uploadModel(event)">
+                </div>
+                <div id="modelInfo" style="font-size: 13px; color: #94a3b8;"></div>
+            </div>
+
+            <!-- Detection Settings -->
+            <div class="settings-section">
+                <div class="section-title">⚙️ ตั้งค่าการตรวจจับ</div>
+                <div class="setting-row">
+                    <label>Confidence Threshold</label>
+                    <input type="number" id="confThreshold" value="0.5" min="0.1" max="1" step="0.1" style="width: 80px;">
+                </div>
+                <div class="setting-row">
+                    <label>ตรวจจับอัตโนมัติ</label>
+                    <select id="autoDetect">
+                        <option value="2000">ทุก 2 วินาที</option>
+                        <option value="5000">ทุก 5 วินาที</option>
+                        <option value="10000">ทุก 10 วินาที</option>
+                        <option value="0">ปิด</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>แหล่งภาพ</label>
+                    <select id="imageSource" onchange="changeSource()">
+                        <option value="upload">อัปโหลดภาพ</option>
+                        <option value="camera">กล้องเว็บแคม</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Live Detection -->
+            <div class="live-section">
+                <div class="section-title">🔴 Live Detection</div>
+                <video id="webcam" class="hidden" autoplay playsinline style="width: 100%; border-radius: 8px;"></video>
+                <canvas id="liveCanvas" class="hidden" style="width: 100%; border-radius: 8px;"></canvas>
+                <img id="lastFrame" class="live-preview" style="display: none;">
+
+                <div class="live-controls">
+                    <button class="btn-main btn-snap" id="snapBtn" onclick="snapAndDetect()">📸 ถ่าย & ตรวจจับ</button>
+                    <button class="btn-main btn-start hidden" id="startBtn" onclick="startAutoDetect()">▶ เริ่มอัตโนมัติ</button>
+                    <button class="btn-main btn-stop hidden" id="stopBtn" onclick="stopAutoDetect()">⏹ หยุด</button>
+                </div>
+            </div>
+
+            <!-- Slot Results -->
+            <div class="slots-section">
+                <div class="section-title">📊 สถานะช่องจอด</div>
+                <div class="slot-grid" id="slotGrid">
+                    <div style="grid-column: 1/-1; text-align: center; color: #64748b; padding: 20px;">
+                        ยังไม่มีช่องจอด กรุณาวาดช่องจอดบนภาพก่อน
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ==================== CONFIG ====================
+        const API_URL = window.location.origin.includes('localhost') ? 'http://localhost:10000' : window.location.origin;
+
+        // ==================== STATE ====================
+        let canvas, ctx;
+        let bgImage = null;
+        let slots = [];  // [{id, name, points: [[x,y],...], status}]
+        let isDrawing = false;
+        let isLocked = false;
+        let currentPoints = [];
+        let tempPoint = null;
+        let autoDetectInterval = null;
+        let currentModel = null;
+        let stream = null;
+
+        // ==================== INIT ====================
+        window.onload = function() {
+            canvas = document.getElementById('parkingCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            checkAPI();
+
+            // Canvas events
+            canvas.addEventListener('mousedown', handleCanvasClick);
+            canvas.addEventListener('mousemove', handleCanvasMove);
+            canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
+            canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
+
+            // Keyboard shortcut
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') { isDrawing = false; currentPoints = []; updateDrawButton(); }
+                if (e.key === 'l' || e.key === 'L') toggleLock();
+            });
+        };
+
+        window.onresize = resizeCanvas;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientWidth * 0.6;  // 16:10 ratio
+            redrawCanvas();
+        }
+
+        // ==================== API ====================
         async function checkAPI() {
             try {
                 const res = await fetch(`${API_URL}/api/health`);
                 const data = await res.json();
-                document.getElementById('apiStatus').innerHTML = 
-                    `<span style="color: #2e7d32; font-weight: 700;">✅ API Online | Disk: ${data.disk_free_gb}GB free | Models: ${data.models_loaded}</span>`;
+                document.getElementById('apiStatus').textContent = '🟢 API Online';
+                document.getElementById('apiStatus').className = 'status-pill online';
                 if (data.models_loaded > 0) loadModels();
             } catch (e) {
-                document.getElementById('apiStatus').innerHTML = `<span style="color: #c62828; font-weight: 700;">❌ API Offline: ${e.message}</span>`;
+                document.getElementById('apiStatus').textContent = '🔴 API Offline';
+                document.getElementById('apiStatus').className = 'status-pill offline';
             }
         }
 
@@ -194,228 +504,498 @@
                 const data = await res.json();
                 if (data.models.length > 0) {
                     currentModel = data.models[0].id;
-                    showModelSuccess(data.models[0]);
-                    document.getElementById('inputCard').classList.remove('hidden');
-                    document.getElementById('runCard').classList.remove('hidden');
-                    document.getElementById('runBtn').disabled = false;
+                    document.getElementById('modelStatus').textContent = `📦 ${currentModel}`;
+                    document.getElementById('modelInfo').textContent = `Inputs: ${data.models[0].info.inputs.length} | Outputs: ${data.models[0].info.outputs.length}`;
                 }
             } catch (e) {}
         }
 
-        function showModelSuccess(model) {
-            document.getElementById('modelResult').innerHTML = 
-                `<div class="success-box">✅ โมเดลพร้อมใช้งาน: <strong>${model.id}</strong> (${model.size_mb} MB)</div>`;
+        // ==================== BACKGROUND IMAGE ====================
+        function loadBackground(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                bgImage = new Image();
+                bgImage.onload = () => {
+                    document.getElementById('bgUploadZone').classList.add('hidden');
+                    resizeCanvas();
+                    showToast('success', '✅ โหลดภาพพื้นหลังสำเร็จ');
+                };
+                bgImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
-        function showError(message, retryCallback) {
-            document.getElementById('modelResult').innerHTML = 
-                `<div class="error-box">❌ ${message}<br><button class="retry-btn" onclick="${retryCallback}">↻ ลองใหม่</button></div>`;
+        // ==================== CANVAS DRAWING ====================
+        function toggleDrawMode() {
+            if (isLocked) {
+                showToast('warning', '🔒 ปลดล็อคก่อนเพื่อวาด');
+                return;
+            }
+            isDrawing = !isDrawing;
+            currentPoints = [];
+            updateDrawButton();
+            redrawCanvas();
         }
 
-        // ==================== UPLOAD WITH REAL PROGRESS ====================
-        function uploadFile(url, file, onProgress) {
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                const startTime = Date.now();
+        function updateDrawButton() {
+            const btn = document.getElementById('drawBtn');
+            if (isDrawing) {
+                btn.textContent = '✏️ กำลังวาด...';
+                btn.classList.add('active');
+                canvas.classList.add('drawing');
+            } else {
+                btn.textContent = '✏️ วาด';
+                btn.classList.remove('active');
+                canvas.classList.remove('drawing');
+            }
+        }
 
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        const loadedMB = (e.loaded / 1024 / 1024).toFixed(2);
-                        const totalMB = (e.total / 1024 / 1024).toFixed(2);
-                        const elapsed = (Date.now() - startTime) / 1000;
-                        const speed = elapsed > 0 ? (e.loaded / elapsed / 1024 / 1024).toFixed(2) : 0;
-                        onProgress({ percent, loadedMB, totalMB, speed, elapsed: elapsed.toFixed(1) });
-                    }
+        function toggleLock() {
+            isLocked = !isLocked;
+            const btn = document.getElementById('lockBtn');
+            const overlay = document.getElementById('lockOverlay');
+
+            if (isLocked) {
+                btn.textContent = '🔒 ล็อคแล้ว';
+                btn.classList.add('locked');
+                overlay.classList.add('show');
+                canvas.classList.add('locked');
+                isDrawing = false;
+                updateDrawButton();
+                showToast('info', '🔒 หน้าจอถูกล็อค - เริ่มตรวจจับอัตโนมัติ');
+                startAutoDetect();
+            } else {
+                btn.textContent = '🔓 ปลดล็อค';
+                btn.classList.remove('locked');
+                overlay.classList.remove('show');
+                canvas.classList.remove('locked');
+                stopAutoDetect();
+                showToast('info', '🔓 ปลดล็อคแล้ว - สามารถแก้ไขช่องจอดได้');
+            }
+        }
+
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function handleCanvasClick(e) {
+            if (!isDrawing || isLocked) return;
+
+            const pos = getCanvasPos(e);
+            currentPoints.push([pos.x, pos.y]);
+
+            if (currentPoints.length === 4) {
+                // Complete slot
+                const slotId = `slot_${slots.length + 1}`;
+                slots.push({
+                    id: slotId,
+                    name: `ช่อง ${slots.length + 1}`,
+                    points: [...currentPoints],
+                    status: 'unknown',
+                    iou: 0
                 });
-
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            resolve(JSON.parse(xhr.responseText));
-                        } catch (e) {
-                            reject(new Error('Invalid JSON response'));
-                        }
-                    } else {
-                        let errorMsg = `HTTP ${xhr.status}`;
-                        try {
-                            const err = JSON.parse(xhr.responseText);
-                            errorMsg = err.detail || err.message || errorMsg;
-                        } catch (e) {}
-                        reject(new Error(errorMsg));
-                    }
-                });
-
-                xhr.addEventListener('error', () => reject(new Error('Network error - อาจเกิดจากไฟล์ใหญ่เกินไปหรือ timeout')));
-                xhr.addEventListener('timeout', () => reject(new Error('Request timeout - อัปโหลดนานเกินไป')));
-
-                xhr.open('POST', url);
-                xhr.timeout = 300000; // 5 นาที
-
-                const formData = new FormData();
-                formData.append('file', file);
-                xhr.send(formData);
-            });
-        }
-
-        // Model Upload
-        const modelZone = document.getElementById('modelZone');
-        const modelInput = document.getElementById('modelInput');
-        modelZone.addEventListener('click', () => modelInput.click());
-        modelZone.addEventListener('dragover', e => { e.preventDefault(); modelZone.style.borderColor = '#667eea'; });
-        modelZone.addEventListener('dragleave', () => modelZone.style.borderColor = '#c5cae9');
-        modelZone.addEventListener('drop', e => {
-            e.preventDefault();
-            modelZone.style.borderColor = '#c5cae9';
-            if (e.dataTransfer.files.length) handleModelUpload(e.dataTransfer.files[0]);
-        });
-        modelInput.addEventListener('change', e => { if (e.target.files.length) handleModelUpload(e.target.files[0]); });
-
-        async function handleModelUpload(file) {
-            // Check file size (warn if >5MB)
-            const sizeMB = file.size / 1024 / 1024;
-            if (sizeMB > 5) {
-                if (!confirm(`ไฟล์ขนาด ${sizeMB.toFixed(1)}MB อาจอัปโหลดล้มเหลวบน Free Tier\n\nต้องการลองต่อหรือไม่?`)) {
-                    return;
-                }
+                currentPoints = [];
+                isDrawing = false;
+                updateDrawButton();
+                updateSlotDisplay();
+                showToast('success', `✅ สร้างช่องจอด ${slotId} สำเร็จ`);
             }
 
-            if (!file.name.endsWith('.onnx')) {
-                showError('กรุณาเลือกไฟล์ .onnx เท่านั้น', 'document.getElementById(\'modelInput\').click()');
+            redrawCanvas();
+        }
+
+        function handleCanvasMove(e) {
+            if (!isDrawing || isLocked) return;
+            const pos = getCanvasPos(e);
+            tempPoint = [pos.x, pos.y];
+            redrawCanvas();
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                handleCanvasClick(mouseEvent);
+            }
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                handleCanvasMove(mouseEvent);
+            }
+        }
+
+        // ==================== REDRAW ====================
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background
+            if (bgImage) {
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#64748b';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('อัปโหลดภาพพื้นหลังลานจอดรถ', canvas.width/2, canvas.height/2);
+            }
+
+            // Draw completed slots
+            slots.forEach((slot, index) => {
+                drawPolygon(slot.points, slot.status, slot.name, index);
+            });
+
+            // Draw current drawing
+            if (isDrawing && currentPoints.length > 0) {
+                // Draw completed points
+                currentPoints.forEach((p, i) => {
+                    ctx.beginPath();
+                    ctx.arc(p[0], p[1], 6, 0, Math.PI * 2);
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText(i + 1, p[0] - 4, p[1] - 10);
+                });
+
+                // Draw lines between points
+                ctx.beginPath();
+                ctx.moveTo(currentPoints[0][0], currentPoints[0][1]);
+                for (let i = 1; i < currentPoints.length; i++) {
+                    ctx.lineTo(currentPoints[i][0], currentPoints[i][1]);
+                }
+                if (tempPoint && currentPoints.length < 4) {
+                    ctx.lineTo(tempPoint[0], tempPoint[1]);
+                }
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Guide text
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.fillText(`คลิกจุดที่ ${currentPoints.length + 1}/4`, canvas.width/2, 30);
+            }
+        }
+
+        function drawPolygon(points, status, name, index) {
+            if (points.length < 3) return;
+
+            const colors = {
+                empty: { fill: 'rgba(16, 185, 129, 0.2)', stroke: '#10b981' },
+                occupied: { fill: 'rgba(239, 68, 68, 0.3)', stroke: '#ef4444' },
+                warning: { fill: 'rgba(245, 158, 11, 0.3)', stroke: '#f59e0b' },
+                partial: { fill: 'rgba(59, 130, 246, 0.2)', stroke: '#3b82f6' },
+                unknown: { fill: 'rgba(100, 116, 139, 0.2)', stroke: '#64748b' }
+            };
+
+            const color = colors[status] || colors.unknown;
+
+            ctx.beginPath();
+            ctx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i][0], points[i][1]);
+            }
+            ctx.closePath();
+
+            ctx.fillStyle = color.fill;
+            ctx.fill();
+            ctx.strokeStyle = color.stroke;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Draw corner points
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p[0], p[1], 4, 0, Math.PI * 2);
+                ctx.fillStyle = color.stroke;
+                ctx.fill();
+            });
+
+            // Draw label
+            const centerX = points.reduce((a, p) => a + p[0], 0) / points.length;
+            const centerY = points.reduce((a, p) => a + p[1], 0) / points.length;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.beginPath();
+            ctx.roundRect(centerX - 40, centerY - 15, 80, 30, 6);
+            ctx.fill();
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(name, centerX, centerY + 4);
+        }
+
+        // ==================== SLOT MANAGEMENT ====================
+        function clearAllSlots() {
+            if (!confirm('ต้องการล้างช่องจอดทั้งหมด?')) return;
+            slots = [];
+            currentPoints = [];
+            updateSlotDisplay();
+            redrawCanvas();
+            showToast('info', '🗑️ ล้างช่องจอดทั้งหมดแล้ว');
+        }
+
+        async function saveSlots() {
+            if (slots.length === 0) {
+                showToast('warning', 'ยังไม่มีช่องจอดให้บันทึก');
                 return;
             }
 
-            const progress = document.getElementById('modelProgress');
-            const zone = document.getElementById('modelZone');
-            progress.classList.add('show');
-            zone.classList.add('uploading');
-            document.getElementById('modelResult').innerHTML = '';
+            const slotsData = slots.map(s => ({
+                id: s.id,
+                name: s.name,
+                polygon: s.points
+            }));
+
+            const formData = new FormData();
+            formData.append('slots', JSON.stringify(slotsData));
 
             try {
-                const result = await uploadFile(
-                    `${API_URL}/api/model/upload`,
-                    file,
-                    ({ percent, loadedMB, totalMB, speed, elapsed }) => {
-                        document.getElementById('modelBar').style.width = percent + '%';
-                        document.getElementById('modelPct').textContent = percent + '%';
-                        document.getElementById('modelBytes').textContent = `${loadedMB} / ${totalMB} MB`;
-                        document.getElementById('modelTime').textContent = `${elapsed}s`;
-                        document.getElementById('modelSpeed').innerHTML = `⚡ ${speed} MB/s`;
-                        document.getElementById('modelStatus').textContent = percent < 100 ? `กำลังอัปโหลด... ${percent}%` : 'อัปโหลดเสร็จ! กำลังประมวลผล...';
-                    }
-                );
-
-                if (result.success) {
-                    currentModel = result.model_id;
-                    showModelSuccess({ id: result.model_id, size_mb: result.file_size_mb });
-                    document.getElementById('modelStatus').textContent = `✅ โหลดเสร็จใน ${result.load_time_sec}s (รวม ${result.total_time_sec}s)`;
-                    document.getElementById('inputCard').classList.remove('hidden');
-                    document.getElementById('runCard').classList.remove('hidden');
-                    document.getElementById('runBtn').disabled = false;
+                const res = await fetch(`${API_URL}/api/parking/slots`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('success', `💾 บันทึก ${data.slots_count} ช่องจอดสำเร็จ`);
                 }
             } catch (e) {
-                showError(`อัปโหลดล้มเหลว: ${e.message}\n\nแนะนำ: ใช้โมเดลขนาดเล็ก (<5MB) หรือรัน Local`, 'document.getElementById(\'modelInput\').click()');
-                document.getElementById('modelStatus').textContent = '❌ ล้มเหลว';
-            } finally {
-                zone.classList.remove('uploading');
+                showToast('error', '❌ บันทึกล้มเหลว: ' + e.message);
             }
         }
 
-        // Mode Switching
-        window.setMode = function(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            document.querySelectorAll('.input-panel').forEach(p => p.classList.add('hidden'));
-            document.getElementById(`panel-${mode}`).classList.remove('hidden');
-        };
+        function updateSlotDisplay() {
+            const grid = document.getElementById('slotGrid');
+            document.getElementById('slotStatus').textContent = `🎨 ${slots.length} ช่องจอด`;
 
-        // Image Upload (simplified progress)
-        const imageZone = document.getElementById('imageZone');
-        const imageInput = document.getElementById('imageInput');
-        imageZone.addEventListener('click', () => imageInput.click());
-        imageZone.addEventListener('dragover', e => { e.preventDefault(); imageZone.style.borderColor = '#667eea'; });
-        imageZone.addEventListener('dragleave', () => imageZone.style.borderColor = '#c5cae9');
-        imageZone.addEventListener('drop', e => {
-            e.preventDefault();
-            imageZone.style.borderColor = '#c5cae9';
-            if (e.dataTransfer.files.length) handleImage(e.dataTransfer.files[0]);
-        });
-        imageInput.addEventListener('change', e => { if (e.target.files.length) handleImage(e.target.files[0]); });
+            if (slots.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #64748b; padding: 20px;">ยังไม่มีช่องจอด</div>';
+                return;
+            }
 
-        function handleImage(file) {
-            uploadedFiles.image = file;
-            document.getElementById('imageProgress').classList.add('show');
-            let pct = 0;
-            const interval = setInterval(() => {
-                pct += 20;
-                document.getElementById('imageBar').style.width = pct + '%';
-                document.getElementById('imagePct').textContent = pct + '%';
-                if (pct >= 100) {
-                    clearInterval(interval);
-                    setTimeout(() => document.getElementById('imageProgress').classList.remove('show'), 500);
-                }
-            }, 100);
+            let empty = 0, occupied = 0, warning = 0;
 
-            const url = URL.createObjectURL(file);
-            document.getElementById('imagePreview').classList.remove('hidden');
-            document.getElementById('previewImg').src = url;
+            grid.innerHTML = slots.map(slot => {
+                if (slot.status === 'empty') empty++;
+                if (slot.status === 'occupied') occupied++;
+                if (slot.status === 'warning') warning++;
+
+                const statusText = {
+                    empty: '✅ ว่าง',
+                    occupied: '🚗 ไม่ว่าง',
+                    warning: '⚠️ ผิดระเบียบ',
+                    partial: '🔵 บางส่วน',
+                    unknown: '❓ ไม่ทราบ'
+                };
+
+                return `
+                    <div class="slot-card ${slot.status}">
+                        <div class="slot-name">${slot.name}</div>
+                        <div class="slot-status ${slot.status}">${statusText[slot.status] || '❓'}</div>
+                        <div class="slot-iou">IoU: ${(slot.iou * 100).toFixed(1)}%</div>
+                        ${slot.alert ? `<div class="slot-alert">${slot.alert}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('statEmpty').textContent = empty;
+            document.getElementById('statOccupied').textContent = occupied;
+            document.getElementById('statWarning').textContent = warning;
+            document.getElementById('statTotal').textContent = slots.length;
         }
 
-        // Run Inference
-        window.runInference = async function() {
-            const btn = document.getElementById('runBtn');
-            const resultsCard = document.getElementById('resultsCard');
-            const output = document.getElementById('outputResult');
+        // ==================== DETECTION ====================
+        async function snapAndDetect() {
+            if (!currentModel) {
+                showToast('error', 'กรุณาอัปโหลดโมเดลก่อน');
+                return;
+            }
+            if (slots.length === 0) {
+                showToast('error', 'กรุณาวาดช่องจอดก่อน');
+                return;
+            }
 
-            if (!currentModel) { alert('กรุณาอัปโหลดโมเดลก่อน'); return; }
+            const source = document.getElementById('imageSource').value;
+            let imageBlob;
 
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spin">⟳</span> Running...';
-            resultsCard.classList.remove('hidden');
-            output.innerHTML = '<div style="color: #6c757d; padding: 20px;">⏳ กำลังประมวลผล...</div>';
+            if (source === 'camera' && stream) {
+                const video = document.getElementById('webcam');
+                const snapCanvas = document.createElement('canvas');
+                snapCanvas.width = video.videoWidth;
+                snapCanvas.height = video.videoHeight;
+                snapCanvas.getContext('2d').drawImage(video, 0, 0);
+                imageBlob = await new Promise(resolve => snapCanvas.toBlob(resolve, 'image/jpeg'));
+            } else {
+                // Use canvas with background
+                imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+            }
+
+            await runDetection(imageBlob);
+        }
+
+        async function runDetection(imageBlob) {
+            document.getElementById('detectStatus').classList.remove('hidden');
+            document.getElementById('detectStatus').classList.add('detecting');
 
             const formData = new FormData();
             formData.append('model_id', currentModel);
-
-            let endpoint = '/api/inference/';
+            formData.append('file', imageBlob, 'parking.jpg');
+            formData.append('confidence_threshold', document.getElementById('confThreshold').value);
 
             try {
-                if (currentMode === 'image') {
-                    if (!uploadedFiles.image) throw new Error('กรุณาอัปโหลดรูปภาพ');
-                    endpoint += 'image';
-                    formData.append('file', uploadedFiles.image);
-                    formData.append('target_size', document.getElementById('imgSize').value);
-                    formData.append('normalize', document.getElementById('imgNorm').value);
-                } else {
-                    endpoint += 'random';
-                }
-
-                const res = await fetch(`${API_URL}${endpoint}`, { method: 'POST', body: formData });
+                const res = await fetch(`${API_URL}/api/parking/detect`, {
+                    method: 'POST',
+                    body: formData
+                });
                 const data = await res.json();
 
                 if (data.success) {
-                    let html = `<div class="success-box">✅ Inference Success!</div>`;
-                    data.outputs.forEach(out => {
-                        html += `<div style="margin-bottom: 20px;">
-                            <div style="font-weight: 700; color: #1a1a2e; margin-bottom: 10px;">📤 ${out.name}</div>
-                            <div style="font-size: 13px; color: #6c757d; margin-bottom: 10px;">Shape: [${out.shape.join(', ')}]</div>
-                            <div class="output-box"><span class="key">Preview:</span> [${out.preview.map(v => typeof v === 'number' ? v.toFixed(6) : v).join(', ')}]</div>
-                        </div>`;
+                    // Update slots with detection results
+                    data.slots.forEach(result => {
+                        const slot = slots.find(s => s.id === result.slot_id);
+                        if (slot) {
+                            slot.status = result.status;
+                            slot.iou = result.iou;
+                            slot.confidence = result.confidence;
+                            slot.alert = result.alert;
+                        }
                     });
-                    output.innerHTML = html;
-                } else {
-                    output.innerHTML = `<div class="error-box">❌ ${data.detail || data.message || 'Unknown error'}</div>`;
+
+                    updateSlotDisplay();
+                    redrawCanvas();
+
+                    // Show alerts
+                    data.slots.filter(s => s.alert).forEach(s => {
+                        showToast('warning', `⚠️ ${s.name}: ${s.alert}`);
+                    });
+
+                    showToast('success', `🔍 ตรวจพบ ${data.total_vehicles_detected} คัน`);
                 }
             } catch (e) {
-                output.innerHTML = `<div class="error-box">❌ Error: ${e.message}</div>`;
+                showToast('error', '❌ ตรวจจับล้มเหลว: ' + e.message);
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '▶ Run Inference';
+                document.getElementById('detectStatus').classList.add('hidden');
+                document.getElementById('detectStatus').classList.remove('detecting');
             }
-        };
+        }
 
-        checkAPI();
+        // ==================== AUTO DETECT ====================
+        function startAutoDetect() {
+            const interval = parseInt(document.getElementById('autoDetect').value);
+            if (interval === 0) return;
+
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('stopBtn').classList.remove('hidden');
+
+            snapAndDetect(); // Run immediately
+            autoDetectInterval = setInterval(snapAndDetect, interval);
+            showToast('info', `▶ เริ่มตรวจจับอัตโนมัติทุก ${interval/1000} วินาที`);
+        }
+
+        function stopAutoDetect() {
+            if (autoDetectInterval) {
+                clearInterval(autoDetectInterval);
+                autoDetectInterval = null;
+            }
+            document.getElementById('startBtn').classList.remove('hidden');
+            document.getElementById('stopBtn').classList.add('hidden');
+            showToast('info', '⏹ หยุดตรวจจับอัตโนมัติ');
+        }
+
+        // ==================== CAMERA ====================
+        async function changeSource() {
+            const source = document.getElementById('imageSource').value;
+            const video = document.getElementById('webcam');
+            const liveCanvas = document.getElementById('liveCanvas');
+
+            if (source === 'camera') {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    video.classList.remove('hidden');
+                    liveCanvas.classList.remove('hidden');
+                    document.getElementById('startBtn').classList.remove('hidden');
+                } catch (e) {
+                    showToast('error', '❌ ไม่สามารถเข้าถึงกล้อง: ' + e.message);
+                    document.getElementById('imageSource').value = 'upload';
+                }
+            } else {
+                if (stream) {
+                    stream.getTracks().forEach(t => t.stop());
+                    stream = null;
+                }
+                video.classList.add('hidden');
+                liveCanvas.classList.add('hidden');
+                document.getElementById('startBtn').classList.add('hidden');
+                stopAutoDetect();
+            }
+        }
+
+        // ==================== MODEL UPLOAD ====================
+        async function uploadModel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showToast('info', '⏳ กำลังอัปโหลดโมเดล...');
+
+            try {
+                const res = await fetch(`${API_URL}/api/model/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentModel = data.model_id;
+                    document.getElementById('modelStatus').textContent = `📦 ${currentModel}`;
+                    document.getElementById('modelInfo').textContent = `Size: ${data.file_size_mb}MB`;
+                    showToast('success', `✅ โมเดล ${data.model_id} พร้อมใช้งาน`);
+                }
+            } catch (e) {
+                showToast('error', '❌ อัปโหลดโมเดลล้มเหลว');
+            }
+        }
+
+        // ==================== TOAST ====================
+        function showToast(type, message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
     </script>
 </body>
 </html>
