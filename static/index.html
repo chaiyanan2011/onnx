@@ -1,1 +1,635 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Universal ONNX AI API</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px;
+        }
+        .header h1 { font-size: 42px; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .header p { font-size: 18px; opacity: 0.95; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+        .card-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1a1a2e;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .drop-zone {
+            border: 3px dashed #c5cae9;
+            border-radius: 16px;
+            padding: 50px 30px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .drop-zone:hover {
+            border-color: #667eea;
+            background: #e8eaf6;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+        .drop-zone .icon { font-size: 56px; margin-bottom: 16px; }
+        .drop-zone h3 { font-size: 22px; color: #495057; margin-bottom: 8px; }
+        .drop-zone p { color: #6c757d; font-size: 15px; }
+        .btn {
+            padding: 16px 36px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-success { background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white; }
+        .input-mode-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            padding: 14px 24px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .mode-btn:hover { border-color: #667eea; color: #667eea; }
+        .mode-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .input-area { background: #f8f9fa; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+        .input-area h4 { margin-bottom: 16px; color: #1a1a2e; font-size: 17px; }
+        .input-row { display: flex; gap: 14px; margin-bottom: 14px; align-items: center; }
+        .input-row label { min-width: 160px; font-size: 15px; color: #495057; font-weight: 600; }
+        .input-row input, .input-row select, .input-row textarea {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .input-row input:focus, .input-row select:focus, .input-row textarea:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        .input-row textarea { min-height: 100px; resize: vertical; }
+        .media-preview { max-width: 100%; max-height: 400px; border-radius: 12px; margin: 12px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .output-box {
+            background: #1a1a2e;
+            color: #e9ecef;
+            padding: 24px;
+            border-radius: 14px;
+            font-family: 'SF Mono', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            min-height: 120px;
+        }
+        .output-box .key { color: #90caf9; font-weight: 700; }
+        .output-box .value { color: #a5d6a7; }
+        .output-box .number { color: #ffcc80; }
+        .result-success {
+            background: #e8f5e9;
+            border: 2px solid #a5d6a7;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #2e7d32;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .result-error {
+            background: #ffebee;
+            border: 2px solid #ef9a9a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #c62828;
+            font-weight: 700;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 16px 0;
+            display: none;
+        }
+        .progress-bar.show { display: block; }
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 5px;
+        }
+        .confidence-bar {
+            height: 32px;
+            background: #e9ecef;
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 8px 0;
+            position: relative;
+        }
+        .confidence-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 16px;
+            transition: width 0.6s ease;
+            display: flex;
+            align-items: center;
+            padding-left: 14px;
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .model-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: #e3f2fd;
+            color: #1976d2;
+            font-weight: 700;
+            margin: 6px;
+            font-size: 14px;
+        }
+        .api-endpoint {
+            background: #1a1a2e;
+            color: #a5d6a7;
+            padding: 16px 20px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 13px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .api-endpoint:hover { background: #2a2a4e; }
+        .hidden { display: none !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+        .fade-in { animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Universal ONNX AI API</h1>
+            <p>Backend API รันโมเดล ONNX ทุกประเภท | Deploy บน Render.com</p>
+        </div>
 
+        <!-- API Status -->
+        <div class="card">
+            <div class="card-title">📡 API Status</div>
+            <div id="apiStatus">
+                <span style="color: #e65100; font-weight: 600;">
+                    <span class="spin">⟳</span> Checking API...
+                </span>
+            </div>
+            <div id="apiEndpoints" style="margin-top: 16px; display: none;">
+                <div style="font-size: 13px; color: #6c757d; margin-bottom: 8px;">📋 Available Endpoints:</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">POST /api/model/upload</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">GET /api/models</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">POST /api/inference/image</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">POST /api/inference/video</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">POST /api/inference/audio</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">POST /api/inference/text</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">POST /api/inference/numeric</div>
+                <div class="api-endpoint" onclick="copyToClipboard(this)">POST /api/inference/random</div>
+            </div>
+        </div>
+
+        <!-- Model Upload -->
+        <div class="card">
+            <div class="card-title">📦 1. Upload ONNX Model</div>
+            <div class="drop-zone" id="modelDropZone">
+                <div class="icon">📦</div>
+                <h3>ลากไฟล์ .onnx มาวาง</h3>
+                <p>หรือคลิกเพื่อเลือกไฟล์</p>
+                <input type="file" id="modelInput" accept=".onnx" style="display: none;">
+            </div>
+            <div id="modelInfo" style="margin-top: 16px; display: none;"></div>
+        </div>
+
+        <!-- Input Selection -->
+        <div class="card hidden" id="inputCard">
+            <div class="card-title">🎯 2. เลือกประเภทข้อมูล</div>
+            <div class="input-mode-selector">
+                <button class="mode-btn active" onclick="setMode('image')" id="mode-image">📷 Image</button>
+                <button class="mode-btn" onclick="setMode('video')" id="mode-video">🎥 Video</button>
+                <button class="mode-btn" onclick="setMode('audio')" id="mode-audio">🔊 Audio</button>
+                <button class="mode-btn" onclick="setMode('text')" id="mode-text">📝 Text</button>
+                <button class="mode-btn" onclick="setMode('numeric')" id="mode-numeric">🔢 Numeric</button>
+                <button class="mode-btn" onclick="setMode('random')" id="mode-random">🎲 Random</button>
+            </div>
+
+            <!-- Image Panel -->
+            <div id="panel-image" class="input-panel">
+                <div class="drop-zone" id="imageDropZone" style="padding: 40px;">
+                    <div class="icon">🖼️</div>
+                    <h3>อัปโหลดรูปภาพ</h3>
+                    <p>JPG, PNG, WEBP</p>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                </div>
+                <div id="imagePreview" class="hidden" style="margin-top: 16px; text-align: center;">
+                    <img id="previewImg" class="media-preview" style="max-height: 300px;">
+                </div>
+                <div class="input-area" style="margin-top: 16px;">
+                    <div class="input-row"><label>Target Size</label><input type="text" id="imgSize" value="640,640"></div>
+                    <div class="input-row">
+                        <label>Normalization</label>
+                        <select id="imgNorm">
+                            <option value="01">0-1 (÷255)</option>
+                            <option value="imagenet">ImageNet</option>
+                            <option value="11">-1 to 1</option>
+                        </select>
+                    </div>
+                    <div class="input-row">
+                        <label>Channel Order</label>
+                        <select id="imgChannel"><option value="rgb">RGB</option><option value="bgr">BGR</option></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Panel -->
+            <div id="panel-video" class="input-panel hidden">
+                <div class="drop-zone" id="videoDropZone" style="padding: 40px;">
+                    <div class="icon">🎬</div>
+                    <h3>อัปโหลดวิดีโอ</h3>
+                    <p>MP4, WEBM, AVI</p>
+                    <input type="file" id="videoInput" accept="video/*" style="display: none;">
+                </div>
+                <div id="videoPreview" class="hidden" style="margin-top: 16px;">
+                    <video id="previewVideo" class="media-preview" controls style="max-height: 300px;"></video>
+                </div>
+                <div class="input-area" style="margin-top: 16px;">
+                    <div class="input-row"><label>Target Size</label><input type="text" id="vidSize" value="224,224"></div>
+                    <div class="input-row"><label>Max Frames</label><input type="number" id="vidFrames" value="10"></div>
+                </div>
+            </div>
+
+            <!-- Audio Panel -->
+            <div id="panel-audio" class="input-panel hidden">
+                <div class="drop-zone" id="audioDropZone" style="padding: 40px;">
+                    <div class="icon">🎵</div>
+                    <h3>อัปโหลดเสียง</h3>
+                    <p>WAV, MP3, OGG</p>
+                    <input type="file" id="audioInput" accept="audio/*" style="display: none;">
+                </div>
+                <div id="audioPreview" class="hidden" style="margin-top: 16px;">
+                    <audio id="previewAudio" controls style="width: 100%;"></audio>
+                </div>
+                <div class="input-area" style="margin-top: 16px;">
+                    <div class="input-row"><label>Sample Rate</label><input type="number" id="audRate" value="16000"></div>
+                    <div class="input-row"><label>Duration (sec)</label><input type="number" id="audDuration" value="10"></div>
+                </div>
+            </div>
+
+            <!-- Text Panel -->
+            <div id="panel-text" class="input-panel hidden">
+                <div class="input-area">
+                    <h4>📝 ป้อนข้อความ</h4>
+                    <textarea id="textInput" placeholder="พิมพ์ข้อความที่นี่..."></textarea>
+                    <div class="input-row" style="margin-top: 12px;"><label>Max Length</label><input type="number" id="textMaxLen" value="512"></div>
+                </div>
+            </div>
+
+            <!-- Numeric Panel -->
+            <div id="panel-numeric" class="input-panel hidden">
+                <div class="input-area">
+                    <h4>🔢 ข้อมูลตัวเลข</h4>
+                    <div class="input-row"><label>Shape</label><input type="text" id="numShape" value="1,10" placeholder="1, 3, 224, 224"></div>
+                    <div class="input-row">
+                        <label>Data Type</label>
+                        <select id="numDtype">
+                            <option value="float32">float32</option>
+                            <option value="int32">int32</option>
+                            <option value="int64">int64</option>
+                        </select>
+                    </div>
+                    <div class="input-row">
+                        <label>Fill Method</label>
+                        <select id="numFill" onchange="updateNumDisplay()">
+                            <option value="random">Random (0-1)</option>
+                            <option value="zeros">Zeros</option>
+                            <option value="ones">Ones</option>
+                        </select>
+                    </div>
+                    <div id="numDisplay" style="margin-top: 12px; color: #6c757d; font-size: 14px;"></div>
+                </div>
+            </div>
+
+            <!-- Random Panel -->
+            <div id="panel-random" class="input-panel hidden">
+                <div class="input-area">
+                    <h4>🎲 Random Tensor</h4>
+                    <p style="color: #6c757d;">ระบบจะสร้าง random tensor ตาม shape ที่โมเดลกำหนด</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Run -->
+        <div class="card hidden" id="runCard">
+            <div class="card-title">🚀 3. Run Inference</div>
+            <button class="btn btn-success" id="runBtn" onclick="runInference()" disabled style="font-size: 18px;">
+                ▶ Run Inference
+            </button>
+            <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+        </div>
+
+        <!-- Results -->
+        <div class="card hidden" id="resultsCard">
+            <div class="card-title">📤 Results</div>
+            <div id="outputResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-detect API URL
+        const API_URL = window.location.origin.includes('localhost') 
+            ? 'http://localhost:10000' 
+            : window.location.origin;
+
+        let currentModel = null;
+        let currentMode = 'image';
+        let uploadedFiles = {};
+
+        // Check API health
+        async function checkAPI() {
+            try {
+                const res = await fetch(`${API_URL}/api/health`);
+                const data = await res.json();
+                document.getElementById('apiStatus').innerHTML = 
+                    `<span style="color: #2e7d32; font-weight: 700;">✅ API Online (${data.onnx_runtime})</span>`;
+                document.getElementById('apiEndpoints').style.display = 'block';
+                loadModels();
+            } catch (e) {
+                document.getElementById('apiStatus').innerHTML = 
+                    `<span style="color: #c62828; font-weight: 700;">❌ API Offline - ${e.message}</span>`;
+            }
+        }
+
+        async function loadModels() {
+            try {
+                const res = await fetch(`${API_URL}/api/models`);
+                const data = await res.json();
+                if (data.models.length > 0) {
+                    currentModel = data.models[0].id;
+                    document.getElementById('inputCard').classList.remove('hidden');
+                    document.getElementById('runCard').classList.remove('hidden');
+                    document.getElementById('runBtn').disabled = false;
+                    showModelInfo(data.models[0]);
+                }
+            } catch (e) { console.log('No models loaded yet'); }
+        }
+
+        function showModelInfo(model) {
+            const info = document.getElementById('modelInfo');
+            info.style.display = 'block';
+            info.innerHTML = `
+                <div style="background: #e3f2fd; border-radius: 10px; padding: 16px;">
+                    <div style="font-weight: 700; color: #1976d2; margin-bottom: 8px;">📦 ${model.id}</div>
+                    <div style="font-size: 13px; color: #495057;">
+                        Inputs: ${model.info.inputs.length} | Outputs: ${model.info.outputs.length}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Model Upload
+        const modelDropZone = document.getElementById('modelDropZone');
+        const modelInput = document.getElementById('modelInput');
+        modelDropZone.addEventListener('click', () => modelInput.click());
+        modelDropZone.addEventListener('dragover', e => { e.preventDefault(); modelDropZone.style.borderColor = '#667eea'; });
+        modelDropZone.addEventListener('dragleave', () => modelDropZone.style.borderColor = '#c5cae9');
+        modelDropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            modelDropZone.style.borderColor = '#c5cae9';
+            if (e.dataTransfer.files.length) uploadModel(e.dataTransfer.files[0]);
+        });
+        modelInput.addEventListener('change', e => { if (e.target.files.length) uploadModel(e.target.files[0]); });
+
+        async function uploadModel(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('modelInfo').style.display = 'block';
+            document.getElementById('modelInfo').innerHTML = '<div style="color: #e65100;"><span class="spin">⟳</span> Uploading...</div>';
+
+            try {
+                const res = await fetch(`${API_URL}/api/model/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    currentModel = data.model_id;
+                    showModelInfo(data);
+                    document.getElementById('inputCard').classList.remove('hidden');
+                    document.getElementById('runCard').classList.remove('hidden');
+                    document.getElementById('runBtn').disabled = false;
+                }
+            } catch (e) {
+                document.getElementById('modelInfo').innerHTML = `<div style="color: #c62828;">❌ ${e.message}</div>`;
+            }
+        }
+
+        // Mode Switching
+        window.setMode = function(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`mode-${mode}`).classList.add('active');
+            document.querySelectorAll('.input-panel').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`panel-${mode}`).classList.remove('hidden');
+        };
+
+        // File handlers
+        function setupFileHandler(dropZoneId, inputId, previewId, previewElId, fileType) {
+            const dz = document.getElementById(dropZoneId);
+            const inp = document.getElementById(inputId);
+            dz.addEventListener('click', () => inp.click());
+            dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = '#667eea'; });
+            dz.addEventListener('dragleave', () => dz.style.borderColor = '#c5cae9');
+            dz.addEventListener('drop', e => {
+                e.preventDefault();
+                dz.style.borderColor = '#c5cae9';
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0], previewId, previewElId, fileType);
+            });
+            inp.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0], previewId, previewElId, fileType); });
+        }
+
+        function handleFile(file, previewId, previewElId, type) {
+            uploadedFiles[type] = file;
+            const url = URL.createObjectURL(file);
+            document.getElementById(previewId).classList.remove('hidden');
+            if (type === 'image') document.getElementById(previewElId).src = url;
+            if (type === 'video') document.getElementById(previewElId).src = url;
+            if (type === 'audio') document.getElementById(previewElId).src = url;
+        }
+
+        setupFileHandler('imageDropZone', 'imageInput', 'imagePreview', 'previewImg', 'image');
+        setupFileHandler('videoDropZone', 'videoInput', 'videoPreview', 'previewVideo', 'video');
+        setupFileHandler('audioDropZone', 'audioInput', 'audioPreview', 'previewAudio', 'audio');
+
+        window.updateNumDisplay = function() {
+            const fill = document.getElementById('numFill').value;
+            const shape = document.getElementById('numShape').value;
+            document.getElementById('numDisplay').innerHTML = 
+                `จะสร้าง tensor ขนาด [${shape}] ด้วยวิธี <strong>${fill}</strong>`;
+        };
+        updateNumDisplay();
+
+        // Run Inference
+        window.runInference = async function() {
+            const btn = document.getElementById('runBtn');
+            const resultsCard = document.getElementById('resultsCard');
+            const output = document.getElementById('outputResult');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            if (!currentModel) { alert('กรุณาอัปโหลดโมเดลก่อน'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spin">⟳</span> Running...';
+            resultsCard.classList.remove('hidden');
+            output.innerHTML = '<div style="color: #6c757d; padding: 20px;">⏳ กำลังประมวลผล...</div>';
+            progressBar.classList.add('show');
+            progressFill.style.width = '30%';
+
+            const formData = new FormData();
+            formData.append('model_id', currentModel);
+
+            let endpoint = '/api/inference/';
+
+            try {
+                if (currentMode === 'image') {
+                    if (!uploadedFiles.image) { throw new Error('กรุณาอัปโหลดรูปภาพ'); }
+                    endpoint += 'image';
+                    formData.append('file', uploadedFiles.image);
+                    formData.append('target_size', document.getElementById('imgSize').value);
+                    formData.append('normalize', document.getElementById('imgNorm').value);
+                    formData.append('channel_order', document.getElementById('imgChannel').value);
+                } else if (currentMode === 'video') {
+                    if (!uploadedFiles.video) { throw new Error('กรุณาอัปโหลดวิดีโอ'); }
+                    endpoint += 'video';
+                    formData.append('file', uploadedFiles.video);
+                    formData.append('target_size', document.getElementById('vidSize').value);
+                    formData.append('max_frames', document.getElementById('vidFrames').value);
+                } else if (currentMode === 'audio') {
+                    if (!uploadedFiles.audio) { throw new Error('กรุณาอัปโหลดเสียง'); }
+                    endpoint += 'audio';
+                    formData.append('file', uploadedFiles.audio);
+                    formData.append('sample_rate', document.getElementById('audRate').value);
+                    formData.append('duration', document.getElementById('audDuration').value);
+                } else if (currentMode === 'text') {
+                    endpoint += 'text';
+                    formData.append('text', document.getElementById('textInput').value);
+                    formData.append('max_length', document.getElementById('textMaxLen').value);
+                } else if (currentMode === 'numeric') {
+                    endpoint += 'numeric';
+                    const shape = document.getElementById('numShape').value;
+                    const dtype = document.getElementById('numDtype').value;
+                    const fill = document.getElementById('numFill').value;
+                    const dims = shape.split(',').map(s => parseInt(s.trim()));
+                    const total = dims.reduce((a,b) => a*b, 1);
+                    let values;
+                    if (fill === 'zeros') values = new Array(total).fill(0);
+                    else if (fill === 'ones') values = new Array(total).fill(1);
+                    else values = Array.from({length: total}, () => Math.random());
+                    formData.append('data', JSON.stringify(values));
+                    formData.append('shape', shape);
+                    formData.append('dtype', dtype);
+                } else {
+                    endpoint += 'random';
+                }
+
+                progressFill.style.width = '60%';
+
+                const res = await fetch(`${API_URL}${endpoint}`, { method: 'POST', body: formData });
+                const data = await res.json();
+
+                progressFill.style.width = '100%';
+
+                if (data.success) {
+                    let html = `<div class="result-success">✅ Inference Success!</div>`;
+                    data.outputs.forEach(out => {
+                        html += `<div style="margin-bottom: 20px;">
+                            <div style="font-weight: 700; color: #1a1a2e; margin-bottom: 8px;">📤 ${out.name}</div>
+                            <div style="font-size: 13px; color: #6c757d; margin-bottom: 10px;">
+                                Shape: [${out.shape.join(', ')}]
+                            </div>
+                            <div class="output-box">
+<span class="key">Preview (first 20 values):</span>
+[${out.preview.map(v => typeof v === 'number' ? v.toFixed(6) : v).join(', ')}]
+                            </div>
+                        </div>`;
+                    });
+                    output.innerHTML = html;
+                } else {
+                    output.innerHTML = `<div class="result-error">❌ ${data.error || 'Unknown error'}</div>`;
+                }
+
+            } catch (e) {
+                output.innerHTML = `<div class="result-error">❌ Error: ${e.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '▶ Run Inference';
+                setTimeout(() => { progressBar.classList.remove('show'); progressFill.style.width = '0%'; }, 1000);
+            }
+        };
+
+        function copyToClipboard(el) {
+            navigator.clipboard.writeText(el.textContent);
+            el.style.background = '#4caf50';
+            setTimeout(() => el.style.background = '#1a1a2e', 500);
+        }
+
+        // Init
+        checkAPI();
+    </script>
+</body>
+</html>
